@@ -1,0 +1,34 @@
+description: "Hierarchical Spectrogram Transformer"
+data_root: "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/"
+data_list: "./datasets"
+use_model: "hst"
+train_list: "./datasets/train_list.txt"
+valid_list: "./datasets/valid_list.txt"
+test_list: "./datasets/test_list.txt"
+l2m: "./datasets/label2meta.json"
+train_conf:
+  max_epochs: 5
+  use_gpu: True
+  enable_amp: True
+dataset_conf:
+  dataLoader:
+    batch_size: 64
+    num_workers: 0
+optim_conf:
+  lr: 0.001
+  weight_decay: !!float 1e-5
+model_conf:
+  img_size: 224
+  h: 4
+  img_channel: 3
+  num_labels: 2
+  d: 96
+  num_blocks: [1,1,9,1]
+  num_attention_heads: [3,6,12,24]
+  win_size: 7
+  mlp_ratio: 4.0
+  use_bias: True
+  dropout_rate: 0.0
+  attn_dropout_rate: 0.0
+  drop_path_rate: 0.1
+load_epoch: False
