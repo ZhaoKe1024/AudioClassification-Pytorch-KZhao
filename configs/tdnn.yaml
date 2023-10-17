@@ -1,7 +1,7 @@
 description: "Hierarchical Spectrogram Transformer"
 data_root: "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/"
 data_list: "./datasets"
-use_model: "hst"
+use_model: "tdnn"
 train_list: "./datasets/train_list.txt"
 valid_list: "./datasets/valid_list.txt"
 test_list: "./datasets/test_list.txt"
@@ -15,29 +15,12 @@ dataset_conf:
   dataLoader:
     batch_size: 64
     num_workers: 0
-# 数据预处理参数
 preprocess_conf:
-  # 音频预处理方法，支持：MelSpectrogram、Spectrogram、MFCC、Fbank
   feature_method: 'MFCC'
-  # 设置API参数，更参数查看对应API，不清楚的可以直接删除该部分，直接使用默认值
-  method_args:
-    sample_frequency: 16000
-    num_mel_bins: 80
 optim_conf:
   lr: 0.001
   weight_decay: !!float 1e-5
 model_conf:
-  img_size: 224
-  h: 4
-  img_channel: 3
-  num_labels: 2
-  d: 96
-  num_blocks: [1,1,9,1]
-  num_attention_heads: [3,6,12,24]
-  win_size: 7
-  mlp_ratio: 4.0
-  use_bias: True
-  dropout_rate: 0.0
-  attn_dropout_rate: 0.0
-  drop_path_rate: 0.1
+  mfcc_size: 126
+
 load_epoch: False

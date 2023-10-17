@@ -7,12 +7,12 @@
 import io
 import itertools
 import os
-import random
 import wave
 
 import av
 import matplotlib.pyplot as plt
 import numpy as np
+import resampy
 import soundfile
 
 
@@ -34,21 +34,23 @@ def _convert_samples_to_float32(samples):
 
 
 class AudioSegment(object):
-    def __init__(self, samples, sr):
-        self._samples = _convert_samples_to_float32(samples)
-        self._sr = sr
-        if self._samples.ndim >= 2:
-            self._sample = np.mean(self._samples, axis=1)
+    def __init__(self, samples, sr, resample=False, res_sr=16000):
+        self.samples = _convert_samples_to_float32(samples)
+        self.sr = sr
+        if self.samples.ndim >= 2:
+            self._sample = np.mean(self.samples, axis=1)
+        if resample:
+            self.resample(target_sr=res_sr)
 
     @classmethod
-    def from_file(cls, file):
+    def from_file(cls, file, resample=False, res_sr=16000):
         assert os.path.exists(file), f"this file does not exists, please check the path: {file}"
         try:
             samples, sr = soundfile.read(file, dtype="float32")
         except:
             sr = 16000
             samples = decode_audio(file=file, sample_rate=sr)
-        return cls(samples, sr)
+        return cls(samples, sr, resample=resample, res_sr=res_sr)
 
     def normalize(self, target_db=-20, max_gain_db=300.0):
         """将音频归一化，使其具有所需的有效值(以分贝为单位)
@@ -79,7 +81,7 @@ class AudioSegment(object):
         :rtype: float
         """
         # square root => multiply by 10 instead of 20 for dBs
-        mean_square = np.mean(self._samples ** 2)
+        mean_square = np.mean(self.samples ** 2)
         return 10 * np.log10(mean_square)
 
     def gain_db(self, gain):
@@ -90,7 +92,29 @@ class AudioSegment(object):
         :param gain: Gain in decibels to apply to samples.
         :type gain: float|1darray
         """
-        self._samples *= 10. ** (gain / 20.)
+        self.samples *= 10. ** (gain / 20.)
+
+    def resample(self, target_sr, filter='kaiser_best'):
+        """按目标采样率重新采样音频
+
+        Note that this is an in-place transformation.
+
+        :param target_sample_rate: Target sample rate.
+        :type target_sample_rate: int
+        :param filter: The resampling filter to use one of {'kaiser_best', 'kaiser_fast'}.
+        :type filter: str
+        """
+        # print(self.samples.shape)
+        if self.samples.ndim > 2 or self.samples.ndim < 1:
+            raise ValueError("the dimension of sound is more than 2.")
+        if self.samples.ndim == 2:
+            new_sample = []
+            for i in range(self.samples.shape[1]):
+                new_sample.append(resampy.resample(self.samples[:, i], self.sr, target_sr, filter=filter))
+            self.samples = np.array(new_sample)
+        else:
+            self.samples = resampy.resample(self.samples, self.sr, target_sr, filter=filter)
+        self.sr = target_sr
 
 
 def decode_audio(file, sample_rate: int = 16000):

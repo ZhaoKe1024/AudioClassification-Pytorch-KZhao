@@ -11,7 +11,7 @@ from ackit.utils import utils
 
 
 def main():
-    trainer = HSTTrainer(configs="./configs/hst.yaml", use_gpu=True)
+    trainer = HSTTrainer(configs="./configs/tdnn.yaml", use_gpu=True)
     trainer.train()
     # trainer.print_configs()
     # if not args.load_epoch:

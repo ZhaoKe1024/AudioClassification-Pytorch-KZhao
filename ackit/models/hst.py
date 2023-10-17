@@ -33,8 +33,19 @@ class HSTModel(nn.Module):
         self.__init_modules()
         self.apply(_init_weights)
 
+    def forward(self, x):
+        x = self.patch_parts(x)
+        x = self.dropout(x)
+        for hst_layer in self.layers:
+            x = hst_layer(x)
+        x = self.norm_layer(x)
+        x = self.avgpool_layer(x.transpose(1, 2))
+        x = torch.flatten(x, 1)
+        x = self.head(x)
+        return x
+
     def __init_modules(self):
-        img_size = self.configs.model_conf["img_size"]
+        img_size = self.configs.model_conf["mfcc_size"]
         d = self.configs.model_conf["d"]
         self.patch_parts = PatchPartition(img_size=img_size,
                                           h=self.configs.model_conf["h"],
@@ -77,19 +88,6 @@ class HSTModel(nn.Module):
         # Classification head
         num_labels = self.configs.model_conf["num_labels"]
         self.head = nn.Linear(feat_map_dim, num_labels) if num_labels > 0 else nn.Identity()
-
-    def forward(self, x):
-        x = self.patch_parts(x)
-        x = self.dropout(x)
-
-        for hst_layer in self.layers:
-            x = hst_layer(x)
-
-        x = self.norm_layer(x)
-        x = self.avgpool_layer(x.transpose(1, 2))
-        x = torch.flatten(x, 1)
-        x = self.head(x)
-        return x
 
 
 class PatchPartition(nn.Module):
