@@ -59,7 +59,7 @@ class HSTTrainer(object):
                                            shuffle=True,
                                            num_workers=self.configs.dataset_conf.dataLoader.num_workers,
                                            collate_fn=collate_fn)
-
+            print("create train valid test loader...")
         # 获取测试数据
         self.valid_dataset = UrbansoundDataset(root=self.configs.data_root, file_list=self.configs.valid_list,
                                                is_feat=is_feat)
@@ -79,17 +79,19 @@ class HSTTrainer(object):
         if self.configs.use_model == "hst":
             self.model = HSTModel(self.configs)
         elif self.configs.use_model == "tdnn":
-            self.model = TDNN(num_class=10, input_size=126)  # [16, 40, 126]
+            print("initialize TDNN model...")
+            self.model = TDNN(num_class=10, input_size=40)  # [16, 40, 126]
         self.model.to(self.device)
         self.audio_featurizer = AudioFeaturizer(feature_method=self.configs.preprocess_conf["feature_method"])
         self.audio_featurizer.to(self.device)
-
+        print("initialize Audio Featurizer...")
         self.loss = F.cross_entropy
         if is_train:
             if self.configs.train_conf.enable_amp:
                 self.amp_scaler = torch.cuda.amp.GradScaler(init_scale=1024)
             self.optim = torch.optim.SGD(self.model.parameters(), self.configs.optim_conf.lr,
                                          weight_decay=self.configs.optim_conf.weight_decay)
+            print("initialize loss, amp, Optimizer SGD...")
 
     def __save_checkpoint(self):
         pass

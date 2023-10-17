@@ -51,12 +51,17 @@ class AudioFeaturizer(nn.Module):
         # 对掩码比例进行扩展
         input_lens = (input_lens_ratio * feature.shape[1])
         mask_lens = torch.round(input_lens).long()
-        mask_lens = mask_lens.unsqueeze(1)
+        mask_lens = mask_lens.unsqueeze(1)  # [16, 1]
+        # print(mask_lens)
         input_lens = input_lens.int()
         # 生成掩码张量
         idxs_start = (feature.shape[1] - input_lens) // 2
+        idxs_start = torch.tensor(idxs_start).unsqueeze(1)
+        # print(idxs_start)  # [16, 1]
         idxs = torch.arange(feature.shape[1], device=feature.device).repeat(feature.shape[0], 1)
-        mask = idxs_start < idxs < idxs_start + mask_lens
+        # print(idxs.shape)  # [16, 321]
+        # print(idxs_start < idxs < (idxs_start + mask_lens))  # RuntimeError: Boolean value of Tensor with more than one value is ambiguous
+        mask = (idxs > idxs_start) * (idxs < (idxs_start + mask_lens))
         mask = mask.unsqueeze(-1)
         # 对特征进行掩码操作
         feature_masked = torch.where(mask, feature, torch.zeros_like(feature))

@@ -18,7 +18,7 @@ def collate_and_mask_test():
     af = AudioFeaturizer("MFCC")
     for idx, (wav, label, ilr) in enumerate(dl):
         feat = af(wav, ilr)
-        # print()
+        print(feat)
 
 
 if __name__ == '__main__':
