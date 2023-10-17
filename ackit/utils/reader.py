@@ -9,29 +9,37 @@ import os
 import librosa
 import numpy as np
 import torch
-import yaml
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 from ackit.utils.audio import AudioSegment
 
 
 class UrbansoundDataset(Dataset):
-    def __init__(self, root, file_list=None, is_feat=False):
+    def __init__(self, root, file_list="train", is_feat=False):
         self.root = root
         self.file_list_path = file_list
-        self.file_list = []
-        self.label_list = []
-        self.file_list_init()
         self.is_feat = is_feat
+        self.file_list = None
+        self.label_list = None
+        self.pad_start = None
+        self.file_list_init()
 
     def file_list_init(self):
-        with open(self.file_list_path, 'r') as tr_list:
-            line = tr_list.readline()
-            while line:
-                parts = line.split('\t')
-                self.file_list.append(parts[0])
-                self.label_list.append(parts[1])
+        if self.is_feat:
+            file_mfccs = np.load(f"./datasets/{self.file_list_path}_mfcc.npy")
+            file_info = np.load(f"./datasets/{self.file_list_path}_info.npy ")
+            # self.
+            self.file_list = file_mfccs
+            self.label_list = file_info[:, 0]
+            self.pad_start = file_info[:, 1]
+        else:
+            with open(self.file_list_path, 'r') as tr_list:
                 line = tr_list.readline()
+                while line:
+                    parts = line.split('\t')
+                    self.file_list.append(parts[0])
+                    self.label_list.append(parts[1])
+                    line = tr_list.readline()
 
         # print(os.path.join(self.root, "/metadata/UrbanSound8K.csv").replace('\\', '/'))
         # with open(self.root + "/metadata/UrbanSound8K.csv", 'r') as csvfile:
@@ -46,7 +54,11 @@ class UrbansoundDataset(Dataset):
         #             self.label_list.append(int(parts[6]))
         #         line = csvfile.readline()
 
-    def __getitem__(self, item):
+    def __getitem__(self, ind):
+        return self.file_list[ind], self.label_list[ind], self.pad_start[ind]
+
+    def _getitem_from_wavfile(self, item):
+        """废弃了! 除非返回在这里读取音频,但是真慢"""
         """ 由于音频数据长度不一，MFCC特征的第2维度(index=1)长度也不一样，需要collate_fn处理"""
         audio_path, label = self.file_list[item], self.label_list[item]
         audio_segment = AudioSegment.from_file(
@@ -122,34 +134,3 @@ def collate_fn_zero2_pad(batch):
         inputs[i, :, inx_start:inx_start + seq_length] = tensor
     labels = np.array(labels, dtype='int64')
     return torch.tensor(inputs), torch.tensor(labels)
-
-
-def dataset_test():
-    configs = "../../configs/hst.yaml"
-    if isinstance(configs, str):
-        with open(configs, 'r', encoding='utf-8') as f:
-            configs = yaml.load(f.read(), Loader=yaml.FullLoader)
-
-    ds = UrbansoundDataset(configs['data_root'], "../../datasets/train_list.txt", is_feat=False)
-    dl = DataLoader(ds,
-                    batch_size=16,
-                    shuffle=True, num_workers=0, collate_fn=collate_fn_zero1_pad)
-    from featurizer import AudioFeaturizer
-    af = AudioFeaturizer(feature_method="MFCC")
-    for idx, (data, label, dlr) in enumerate(dl):
-        print(idx, '\t', data.shape, '\t', len(dlr))
-        # x = torch.tensor(data)
-        feat = af(data, dlr)
-        print(feat[0].shape, feat[1].shape)
-    # sample1, sr1 = ds[1]
-    # sample2, sr2 = ds[2]
-    # print(sample1.shape)
-    # print(sample2.shape)
-
-
-if __name__ == '__main__':
-    dataset_test()
-    # a = torch.randn((3, 3))
-    # b = torch.zeros((3, 8))
-    # b[:, 2:5] = a
-    # print(b)

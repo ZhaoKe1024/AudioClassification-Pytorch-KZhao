@@ -16,9 +16,8 @@ from tqdm import tqdm
 
 from ackit.models.hst import HSTModel
 from ackit.models.tdnn import TDNN
-from ackit.utils.featurizer import AudioFeaturizer
 from ackit.utils.metrics import accuracy
-from ackit.utils.reader import UrbansoundDataset, collate_fn_zero1_pad, collate_fn_zero2_pad
+from ackit.utils.reader import UrbansoundDataset
 from ackit.utils.utils import dict_to_object
 
 
@@ -40,40 +39,35 @@ class HSTTrainer(object):
         self.optim = None
         self.amp_scaler = None
 
-        self.audio_featurizer = None
-
     def print_configs(self):
         # for item in self.configs.keys():
         #     print(self.configs[item])
         print(self.configs)
 
     def __setup_dataloader(self, is_train):
-        is_feat = False
-        collate_fn = collate_fn_zero2_pad if is_feat else collate_fn_zero1_pad
+        is_feat = True
+        # collate_fn = collate_fn_zero2_pad if is_feat else collate_fn_zero1_pad
         if is_train:
             self.train_dataset = UrbansoundDataset(root=self.configs.data_root,
-                                                   file_list=self.configs.train_list,
+                                                   file_list="train",
                                                    is_feat=is_feat)
             self.train_loader = DataLoader(self.train_dataset,
                                            batch_size=self.configs.dataset_conf.dataLoader.batch_size,
                                            shuffle=True,
-                                           num_workers=self.configs.dataset_conf.dataLoader.num_workers,
-                                           collate_fn=collate_fn)
+                                           num_workers=self.configs.dataset_conf.dataLoader.num_workers)
             print("create train valid test loader...")
         # 获取测试数据
-        self.valid_dataset = UrbansoundDataset(root=self.configs.data_root, file_list=self.configs.valid_list,
+        self.valid_dataset = UrbansoundDataset(root=self.configs.data_root, file_list="valid",
                                                is_feat=is_feat)
         self.valid_loader = DataLoader(self.valid_dataset, batch_size=self.configs.dataset_conf.dataLoader.batch_size,
                                        shuffle=True,
-                                       num_workers=self.configs.dataset_conf.dataLoader.num_workers,
-                                       collate_fn=collate_fn)
+                                       num_workers=self.configs.dataset_conf.dataLoader.num_workers)
 
-        self.test_dataset = UrbansoundDataset(root=self.configs.data_root, file_list=self.configs.test_list,
+        self.test_dataset = UrbansoundDataset(root=self.configs.data_root, file_list="test",
                                               is_feat=is_feat)
         self.test_loader = DataLoader(self.test_dataset, batch_size=self.configs.dataset_conf.dataLoader.batch_size,
                                       shuffle=False,
-                                      num_workers=self.configs.dataset_conf.dataLoader.num_workers,
-                                      collate_fn=collate_fn)
+                                      num_workers=self.configs.dataset_conf.dataLoader.num_workers)
 
     def __setup_model(self, is_train):
         if self.configs.use_model == "hst":
@@ -82,9 +76,11 @@ class HSTTrainer(object):
             print("initialize TDNN model...")
             self.model = TDNN(num_class=10, input_size=40)  # [16, 40, 126]
         self.model.to(self.device)
-        self.audio_featurizer = AudioFeaturizer(feature_method=self.configs.preprocess_conf["feature_method"])
-        self.audio_featurizer.to(self.device)
-        print("initialize Audio Featurizer...")
+
+        # self.audio_featurizer = AudioFeaturizer(feature_method=self.configs.preprocess_conf["feature_method"])
+        # self.audio_featurizer.to(self.device)
+        # print("initialize Audio Featurizer...")
+
         self.loss = F.cross_entropy
         if is_train:
             if self.configs.train_conf.enable_amp:
@@ -101,21 +97,27 @@ class HSTTrainer(object):
         train_bar = tqdm(self.train_loader, total=num_steps, desc=f"Epoch-{epoch_id}")
         acc = []
         loop_num = 0
-        for batch_id, (data, label, ilr) in enumerate(train_bar):
+        for batch_id, (feat, label, _) in enumerate(train_bar):
             # step 3
-            data = data.to(self.device)
+            feat = feat.to(torch.float32).to(self.device)
             label = label.to(self.device)
-            ilr = ilr.to(self.device)
-            feat, _ = self.audio_featurizer(data, ilr)
+            # ilr = ilr.to(self.device)
+            # feat, _ = mask_with_ratio(data, ilr)
+            # feat shape: torch.Size([64, 321, 40]) false
+            # print("feat shape: ", feat.shape)
+            # return
+
             # step 4
             output = self.model(feat)
             # step 5
-            loss = self.loss(output, label)
+            loss = self.loss(output, label.long())
             # step 6 7 8
             loss.backward()
             self.optim.step()
             self.optim.zero_grad()
             acc.append(accuracy(output, label))
+            # print(f"loss: {loss}")
+        # print("acc:", acc)
         return sum(acc) / loop_num
 
     def train(self):
@@ -127,9 +129,10 @@ class HSTTrainer(object):
             epoch_id += 1
             start_time = time.time()
             avg_acc = self.__train_epoch(epoch_id=epoch_id)
-
+            print(avg_acc)
+            # return
             # avg_score = self.evaluate()
-            print(timedelta(time.time() - start_time))
+            print("tim cost per epoch: ", timedelta(time.time() - start_time))
             # self.model.train()
             # if avg_score > best_score:
             #     best_score = avg_score

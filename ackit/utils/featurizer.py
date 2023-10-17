@@ -66,6 +66,7 @@ class AudioFeaturizer(nn.Module):
         # 对特征进行掩码操作
         feature_masked = torch.where(mask, feature, torch.zeros_like(feature))
         return feature_masked, input_lens
+        # feature_masked [64, 40, 127]
 
     @property
     def feature_dim(self):

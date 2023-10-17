@@ -61,7 +61,7 @@ class TDNN(nn.Module):
         Returns:
             torch.Tensor: Output embeddings with shape (N, self.emb_size, 1)
         """
-        x = x.transpose(2, 1)
+        # x = x.transpose(2, 1)
         x = F.relu(self.td_layer1(x))
         x = self.bn1(x)
         x = F.relu(self.td_layer2(x))

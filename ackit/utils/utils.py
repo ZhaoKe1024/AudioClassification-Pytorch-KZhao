@@ -5,6 +5,7 @@
 # @File : utils.py
 # @Software: PyCharm
 import librosa
+import torch
 import yaml
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,6 +38,27 @@ def dict_to_object(dict_obj):
     for k, v in dict_obj.items():
         inst[k] = dict_to_object(v)
     return inst
+
+
+def mask_with_start_index(feature, start_index):
+    """从AudioSegment中提取音频特征
+
+    :param feature: Audio segment to extract features from. (40, 174)
+    :type feature: AudioSegment
+    :param start_index: input length ratio
+    :type start_index: tensor
+    :return: Spectrogram audio feature in 2darray.
+    :rtype: ndarray
+    """
+    feature = feature.transpose(2, 1)  # (174, 40)  -> (40, 174)
+    # 归一化
+    feature = feature - feature.mean(1, keepdim=True)  # (128, 40)  -> (128, 174)
+    # print(idxs_start < idxs < (idxs_start + mask_lens))  # RuntimeError: Boolean value of Tensor with more than one value is ambiguous
+    mask = np.zeros_like(feature)
+    mask = mask.unsqueeze(-1)
+    # 对特征进行掩码操作
+    feature_masked = torch.where(mask, feature, torch.zeros_like(feature))
+    return feature_masked
 
 
 def demo_plot_spec():

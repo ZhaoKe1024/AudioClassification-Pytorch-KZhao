@@ -13,7 +13,7 @@ train_conf:
 dataset_conf:
   sr: 16000
   dataLoader:
-    batch_size: 64
+    batch_size: 128
     num_workers: 0
 preprocess_conf:
   feature_method: 'MFCC'
