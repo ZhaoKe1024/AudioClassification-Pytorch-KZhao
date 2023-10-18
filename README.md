@@ -13,6 +13,10 @@ TDNN+MFCC特征（零填充collate）
 - def create_file_list(metafile_path): 该函数创建train,valid,test数据集列表,比例8:1:1
 - def create_mfcc_npy_data(root, tra_val="train"):该函数把上述数据转换为mfcc,根据最大长度对齐(两端对称0填充),然后存储为npy文件,把label和填充索引位置存为另一个npy文件,不再分批次读取音频并转换为MFCC并填充.运行此函数,在/datasets/下面可以找到生成的六个npy文件,分别是train,valid,test数据集的mfcc矩阵,label和填充起始位置列表.
 
+训练
+
+运行train_hst.py即可训练
+
 为了提高数据的质量,之后打算裁剪掉静默的音频段,然后再做MFCC,未完待续
 
 # Reference

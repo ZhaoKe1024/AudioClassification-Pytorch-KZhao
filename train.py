@@ -2,11 +2,11 @@
 # -*- coding: utf_8 -*-
 # @Time : 2023/10/15 17:41
 # @Author: ZhaoKe
-# @File : train_hst.py
+# @File : train.py
 # @Software: PyCharm
 import argparse
 
-from ackit.trainer_hst import HSTTrainer
+from ackit.trainer import HSTTrainer
 from ackit.utils import utils
 
 

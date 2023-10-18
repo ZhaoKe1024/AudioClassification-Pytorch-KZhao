@@ -10,6 +10,7 @@ train_conf:
   max_epochs: 5
   use_gpu: True
   enable_amp: True
+  train_from_zero: True
 dataset_conf:
   sr: 16000
   dataLoader:
