@@ -7,10 +7,11 @@ valid_list: "./datasets/valid_list.txt"
 test_list: "./datasets/test_list.txt"
 l2m: "./datasets/label2meta.json"
 train_conf:
-  max_epochs: 5
+  max_epochs: 20
   use_gpu: True
   enable_amp: True
   train_from_zero: True
+  save_epoch: 5
 dataset_conf:
   sr: 16000
   dataLoader:
@@ -22,6 +23,6 @@ optim_conf:
   lr: 0.001
   weight_decay: !!float 1e-5
 model_conf:
-  mfcc_size: 126
+  mfcc_size: 40
 
 load_epoch: False

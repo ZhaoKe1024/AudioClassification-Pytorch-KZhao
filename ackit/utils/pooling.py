@@ -51,7 +51,10 @@ class SelfAttentivePooling(nn.Module):
 
 
 class AttentiveStatsPool(nn.Module):
-    """ASP"""
+    """ASP
+    title: Attentive Statistics Pooling for Deep Speaker Embedding
+    url: https://arxiv.org/abs/1803.10963v2
+    """
     def __init__(self, in_dim, bottleneck_dim=128):
         super().__init__()
         # Use Conv1d with stride == 1 rather than Linear, then we don't need to transpose inputs.

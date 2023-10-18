@@ -89,7 +89,7 @@ class HSTTrainer(object):
             self.model = HSTModel(self.configs)
         elif self.configs.use_model == "tdnn":
             print("initialize TDNN model...")
-            self.model = TDNN(num_class=10, input_size=40)  # [16, 40, 126]
+            self.model = TDNN(num_class=10, input_size=self.configs.model_conf["mfcc_size"])  # [16, 40, 126]
         self.model.to(self.device)
 
         # self.audio_featurizer = AudioFeaturizer(feature_method=self.configs.preprocess_conf["feature_method"])
@@ -167,7 +167,8 @@ class HSTTrainer(object):
     def __train_epoch(self, epoch_id):
         num_steps = len(self.train_loader)
         train_bar = tqdm(self.train_loader, total=num_steps, desc=f"Epoch-{epoch_id}")
-        acc = []
+        acc_list = []
+        loss_list = []
         loop_num = 0
         for batch_id, (feat, label, _) in enumerate(train_bar):
             # step 3
@@ -187,36 +188,55 @@ class HSTTrainer(object):
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
-            acc.append(accuracy(output, label))
+            acc_list.append(accuracy(output, label))
+            loss_list.append(loss.data.cpu().numpy())
             # print(f"loss: {loss}")
             loop_num += 1
         # print("acc:", acc)
-        return sum(acc) / loop_num
+        return sum(acc_list) / loop_num, sum(loss_list) / loop_num
 
     def train(self, save_model_path="models/", resume_model=None):
         self.__setup_dataloader(is_train=True)
         self.__setup_model(is_train=True)
-        if not self.configs.train_conf["train_from_zero"]:
-            self.__load_checkpoint(save_model_path=save_model_path, resume_model=resume_model)
+
         last_epoch = -1
         best_score = 0.0
+        if not self.configs.train_conf["train_from_zero"]:
+            last_epoch, best_score = self.__load_checkpoint(save_model_path=save_model_path, resume_model=resume_model)
+
+        train_acc_list = []
+        valid_acc_list = []
+        train_loss_list = []
+        valid_loss_list = []
         for epoch_id in range(last_epoch, self.configs.train_conf.max_epochs):
             epoch_id += 1
             start_time = time.time()
-            avg_acc = self.__train_epoch(epoch_id=epoch_id)
-            print(f"epoch[{epoch_id}], avg_acc: ", avg_acc)
+
+            avg_acc, avg_loss = self.__train_epoch(epoch_id=epoch_id)
             # return
-            avg_score = self.evaluate(epoch_id, save_matrix_path="runs/")
+            val_loss, val_acc = self.evaluate(epoch_id, save_matrix_path="runs/")
+            print(f"epoch[{epoch_id}], avg_acc: ", avg_acc)
+            train_loss_list.append(avg_loss)
+            train_acc_list.append(avg_acc)
+            valid_acc_list.append(val_acc)
+            valid_loss_list.append(val_loss)
+
             print("tim cost per epoch: ", timedelta(time.time() - start_time))
-            # self.model.train()
+
             if avg_acc > best_score:
                 best_score = avg_acc
                 self.__save_checkpoint(save_model_path=save_model_path,
                                        params={"epoch_id": epoch_id, "accuracy": avg_acc},
                                        best_model=True)
-            self.__save_checkpoint(save_model_path=save_model_path,
-                                   params={"epoch_id": epoch_id, "accuracy": avg_acc},
-                                   best_model=False)
+            if epoch_id % self.configs.train_conf["save_epoch"] == 0:
+                self.__save_checkpoint(save_model_path=save_model_path,
+                                       params={"epoch_id": epoch_id, "accuracy": avg_acc},
+                                       best_model=False)
+        # 是一维向量，可以
+        np.savetxt(f"./runs/tdnn_MFCC/train_loss_epoch-{self.configs.train_conf.max_epochs}.txt", train_loss_list, fmt="%.8e", delimiter=',', newline='\n')
+        np.savetxt(f"./runs/tdnn_MFCC/train_acc_epoch-{self.configs.train_conf.max_epochs}.txt", train_acc_list, fmt="%.8e", delimiter=',', newline='\n')
+        np.savetxt(f"./runs/tdnn_MFCC/valid_loss_epoch-{self.configs.train_conf.max_epochs}.txt", valid_loss_list, fmt="%.8e", delimiter=',', newline='\n')
+        np.savetxt(f"./runs/tdnn_MFCC/valid_acc_epoch-{self.configs.train_conf.max_epochs}.txt", valid_acc_list, fmt="%.8e", delimiter=',', newline='\n')
 
     def evaluate(self, epoch_id, save_matrix_path=None):
         self.model.eval()
