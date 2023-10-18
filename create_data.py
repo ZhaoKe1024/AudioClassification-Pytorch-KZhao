@@ -13,6 +13,8 @@ import librosa
 import pandas as pd
 import soundfile
 
+from ackit.utils.audio import vad, augment_audio, AudioSegment
+
 
 def ext_list():
     root = "E:/DATAS/medicaldata/COUGHVID-public_dataset_v3/coughvid_20211012"
@@ -63,6 +65,8 @@ def create_mfcc_npy_data(root, tra_val="train"):
     :param dataest_path:
     :return:
     """
+    is_vad, is_add_noise = True, True
+
     with open(f"datasets/{tra_val}_list.txt", 'r') as csvfile:
         csvfile.readline()
         line = csvfile.readline()
@@ -75,10 +79,21 @@ def create_mfcc_npy_data(root, tra_val="train"):
             parts = line.split('\t')
             file_path = os.path.join(root, parts[0]).replace('\\', '/')
             if file_path[-3:] == "wav":
-                X, sr = librosa.load(file_path, res_type='kaiser_fast')
+                seg = AudioSegment.from_file(file_path)
+
+                if is_vad:
+                    if seg.samples.ndim > 1:
+                        X = vad(seg.samples.mean(axis=1), top_db=20, overlap=200)
+                    else:
+                        X = vad(seg.samples, top_db=20, overlap=200)
+                if is_add_noise:
+                    X = augment_audio(noises_path=None,
+                                      audio_segment=AudioSegment(X, seg.sample_rate),
+                                      noise_dir="./datasets/noise")
+
                 # print(librosa.feature.mfcc(y=X, sr=sr, n_mfcc=40).shape)  # (40, 173)
                 # mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sr, n_mfcc=40), axis=1)
-                mfccs = librosa.feature.mfcc(y=X, sr=16000, n_mfcc=40)
+                mfccs = librosa.feature.mfcc(y=X.samples, sr=16000, n_mfcc=40)
                 mfccs_to_save.append(mfccs)
                 info_to_save.append([int(parts[1]), 0])
                 if mfccs.shape[1] > max_length:
@@ -106,8 +121,8 @@ def create_mfcc_npy_data(root, tra_val="train"):
                 new_mfcc[:, pad_start:pad_start + col_num] = mfcc
                 mfccs_to_save[i] = new_mfcc
                 info_to_save[i][1] = pad_start
-        np.save(f"./datasets/{tra_val}_mfcc.npy", mfccs_to_save)
-        np.save(f"./datasets/{tra_val}_info.npy", info_to_save)
+        np.save(f"./datasets/{tra_val}_mfcc_vad_noise.npy", mfccs_to_save)
+        np.save(f"./datasets/{tra_val}_info_vad_noise.npy", info_to_save)
 
 
 def audio_test():
@@ -155,9 +170,9 @@ if __name__ == '__main__':
     # ext_list()
     # create_file_list("metadata/UrbanSound8K.csv")
     # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="train")
-    # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="valid")
+    create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="valid")
     # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="test")
-    read_npy_test()
+    # read_npy_test()
     # audio_test()
     # detect_short()
     # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio/")

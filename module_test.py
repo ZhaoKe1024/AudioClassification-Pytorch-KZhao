@@ -5,9 +5,14 @@
 # @File : module_test.py
 # @Software: PyCharm
 """测试某些模块的正确性"""
+import librosa
+import soundfile
 import yaml
+from IPython.lib.display import Audio
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
+from ackit.utils.audio import vad, augment_audio, AudioSegment
 from ackit.utils.featurizer import AudioFeaturizer
 from ackit.utils.reader import UrbansoundDataset, collate_fn_zero1_pad
 
@@ -40,9 +45,67 @@ def dataset_test():
     # print(sample2.shape)
 
 
+def add_audio_test():
+    wav_file = "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio/fold8/36429-2-0-6.wav"
+    X_segment = AudioSegment.from_file(wav_file)
+    print("X_segment: ", X_segment.samples.shape)
+    X_vaded = vad(X_segment.samples, top_db=20, overlap=200)
+    print("X_vaded: ", X_vaded.shape)
+    x_noise = augment_audio(noises_path=None,
+                            audio_segment=AudioSegment(X_vaded, X_segment.sample_rate),
+                            noise_dir="./datasets/noise")
+    print("X_noise: ", x_noise.samples.shape)
+
+    diff = X_vaded - x_noise.samples
+    print(sum(diff))
+    plt.figure(0)
+    plt.subplot(3, 1, 1)
+    plt.plot(X_segment.samples, c='blue')
+    # plt.plot(X_segment.samples[:, 1], c='red')
+    plt.subplot(3, 1, 2)
+
+    # plt.subplot(3,1,3)
+    plt.plot(x_noise.samples, c='green')
+    # plt.xlim([0, len(X_segment.samples)])
+    plt.plot(X_vaded, c='blue')
+    plt.xlim([0, len(X_segment.samples)])
+    # plt.plot(X_vaded[:,1], c='red')
+    plt.show()
+
+
+def add_audio_play_test():
+    wav_file = "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio/fold8/36429-2-0-6.wav"
+    X_segment = AudioSegment.from_file(wav_file)
+    print("X_segment: ", X_segment.samples.shape)
+    X_vaded = vad(X_segment.samples, top_db=20, overlap=200)
+    print("X_vaded: ", X_vaded.shape)
+    x_noise = augment_audio(noises_path=None,
+                            audio_segment=AudioSegment(X_vaded, X_segment.sample_rate),
+                            noise_dir="./datasets/noise")
+    print("X_noise: ", x_noise.samples.shape)
+    soundfile.write("datasets/test_audio/36429-2-0-6-noise.wav", x_noise.samples, x_noise.sample_rate)
+    diff = X_vaded - x_noise.samples
+    print(sum(diff))
+
+
+def plot_a_wav():
+    wav_file = "./datasets/test_audio/36429-2-0-6-noise.wav"
+    wav_seg = AudioSegment.from_file(wav_file)
+    wav_file_org = "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio/fold8/36429-2-0-6.wav"
+    wav_seg_org = AudioSegment.from_file(wav_file_org)
+    plt.figure(0)
+    plt.plot(wav_seg.samples, c='blue')
+    plt.plot(wav_seg_org.samples, c='red')
+    plt.show()
+
+
 if __name__ == '__main__':
-    dataset_test()
+    # dataset_test()
     # a = torch.randn((3, 3))
+    # for i in range(4):
+    # add_audio_test()
+    plot_a_wav()
+    # add_audio_play_test()
     # b = torch.zeros((3, 8))
     # b[:, 2:5] = a
     # print(b)

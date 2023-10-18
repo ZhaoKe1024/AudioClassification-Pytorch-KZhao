@@ -3,3 +3,6 @@ __pycache__/
 /datasets/
 /models/
 /runs/
+/tools/
+/.ipynb_checkpoints/
+*.ipynb

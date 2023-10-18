@@ -63,9 +63,9 @@ class UrbansoundDataset(Dataset):
         audio_path, label = self.file_list[item], self.label_list[item]
         audio_segment = AudioSegment.from_file(
             file=os.path.join(self.root, "audio", audio_path).replace('\\', '/'))
-        if audio_segment.sr != 16000:
-            audio_segment.resample(target_sr=16000)
-        sample, sr = audio_segment.samples.T, audio_segment.sr
+        if audio_segment._sample_rate != 16000:
+            audio_segment.resample(target_sample_rate=16000)
+        sample, sr = audio_segment._samples.T, audio_segment._sample_rate
         if self.is_feat:
             # sample shape: (x, 2)
             if sample.ndim >= 2:
