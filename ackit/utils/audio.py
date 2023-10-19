@@ -420,7 +420,7 @@ def augment_audio(noises_path,
                   volume_perturb=False,
                   volume_aug_prob=0.2,
                   noise_dir=None,
-                  noise_aug_prob=0.6):
+                  noise_aug_prob=0.2):
     # 语速增强，注意使用语速增强分类数量会大三倍
     if speed_perturb:
         speeds = [1.0, 0.9, 1.1]

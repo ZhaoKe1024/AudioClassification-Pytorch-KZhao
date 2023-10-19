@@ -59,14 +59,33 @@ def create_file_list(metafile_path):
     train_file.close()
 
 
+def pad_as_174(mfcc):
+    max_len = 1500
+    if mfcc.shape[1] < max_len:
+        row_num, col_num = mfcc.shape
+        new_mfcc = np.zeros((row_num, max_len))
+        # print(new_mfcc.shape)
+        pad_start = (max_len - col_num) // 2
+        new_mfcc[:, pad_start:pad_start + col_num] = mfcc
+        return new_mfcc.reshape(1, 40 * max_len)[0], pad_start
+    else:
+        print(mfcc.shape)
+        return mfcc.reshape(1, 40*max_len)[0], 0
+
+
 def create_mfcc_npy_data(root, tra_val="train"):
     """
     train and valid 预先全部转换为MFCC存为npy文件,省去过多的IO时间,这样数据多在CPU和GPU之间传输,而非CPU和IO之间.
+    问题在于数据太大，一次性保存到一个文件里，首先内存需要装得下，因此要考虑其他的存储方案，
+    另外，为了找到最长的MFCC，还要先全部处理一编，应该先规定好数据的标准长度，这个要通过VAD之后的音频找到，以免多余静音数据太长，
+    此外，只有array的话，可以分批次存储到多个npy里面。
+    想到一个办法，把所有数据展为40*174的向量，然后写入到txt里面，需要的时候再reshape回来
     :param dataest_path:
     :return:
     """
     is_vad, is_add_noise = True, True
-
+    output_txt = open(f"./datasets/{tra_val}_vector.txt", 'w')
+    # idx = 0
     with open(f"datasets/{tra_val}_list.txt", 'r') as csvfile:
         csvfile.readline()
         line = csvfile.readline()
@@ -76,7 +95,7 @@ def create_mfcc_npy_data(root, tra_val="train"):
         max_length = 0
         while line:
             # print(line)
-            parts = line.split('\t')
+            parts = line.strip().split('\t')
             file_path = os.path.join(root, parts[0]).replace('\\', '/')
             if file_path[-3:] == "wav":
                 seg = AudioSegment.from_file(file_path)
@@ -93,36 +112,58 @@ def create_mfcc_npy_data(root, tra_val="train"):
 
                 # print(librosa.feature.mfcc(y=X, sr=sr, n_mfcc=40).shape)  # (40, 173)
                 # mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sr, n_mfcc=40), axis=1)
+                # print(X.samples.shape)
+                if X.samples.ndim > 1:
+                    print(X.samples)
+                    break
+                print(X.samples.shape)
                 mfccs = librosa.feature.mfcc(y=X.samples, sr=16000, n_mfcc=40)
-                mfccs_to_save.append(mfccs)
-                info_to_save.append([int(parts[1]), 0])
-                if mfccs.shape[1] > max_length:
-                    max_length = mfccs.shape[1]
-            # print(mfccs)
-            # print(mfccs.shape)
+                if mfccs.ndim > 2:
+                    print(mfccs.shape)
+                    break
+                if mfccs.shape[1]>1500:
+                    print(mfccs.shape)
+                    print(parts[0])
+                    continue
+                mfccs, pad_start = pad_as_174(mfccs)
+                if mfccs.ndim > 1:
+                    print(mfccs.shape)
+                    break
+                # label data
+                output_txt.write(parts[1] + ' ' + str(pad_start) + ' ' + ' '.join([str(x) for x in mfccs]) + ' ' + '\n')
+                idx += 1
+                if idx % 50 == 0:
+                    print(f"already process waveform {idx}")
+            #         mfccs_to_save.append(mfccs)
+            #         info_to_save.append([int(parts[1]), 0])
+            #         if mfccs.shape[1] > max_length:
+            #             max_length = mfccs.shape[1]
+            #     # print(mfccs)
+            #     # print(mfccs.shape)
             line = csvfile.readline()
-            # break
-            if idx % 200 == 0 and idx > 1:
-                print(f"already process waveform {idx}")
-                # break
-            idx += 1
-            # break
-
-        # (40, 173), 173并非固定
-        # print("--------padding----------")
-        print("max_len: ", max_length)
-        print(len(mfccs_to_save))
-        for i, mfcc in enumerate(mfccs_to_save):
-            if mfcc.shape[1] < max_length:
-                row_num, col_num = mfcc.shape
-                new_mfcc = np.zeros((row_num, max_length))
-                # print(new_mfcc.shape)
-                pad_start = (max_length - col_num) // 2
-                new_mfcc[:, pad_start:pad_start + col_num] = mfcc
-                mfccs_to_save[i] = new_mfcc
-                info_to_save[i][1] = pad_start
-        np.save(f"./datasets/{tra_val}_mfcc_vad_noise.npy", mfccs_to_save)
-        np.save(f"./datasets/{tra_val}_info_vad_noise.npy", info_to_save)
+        #     # break
+        #     if idx % 200 == 0 and idx > 1:
+        #         print(f"already process waveform {idx}")
+        #         # break
+        #     idx += 1
+        #     # break
+        #
+        # # (40, 173), 173并非固定
+        # # print("--------padding----------")
+        # print("max_len: ", max_length)
+        # print(len(mfccs_to_save))
+        # for i, mfcc in enumerate(mfccs_to_save):
+        #     if mfcc.shape[1] < max_length:
+        #         row_num, col_num = mfcc.shape
+        #         new_mfcc = np.zeros((row_num, max_length))
+        #         # print(new_mfcc.shape)
+        #         pad_start = (max_length - col_num) // 2
+        #         new_mfcc[:, pad_start:pad_start + col_num] = mfcc
+        #         mfccs_to_save[i] = new_mfcc
+        #         info_to_save[i][1] = pad_start
+        # np.save(f"./datasets/{tra_val}_mfcc_vad_noise.npy", mfccs_to_save)
+        # np.save(f"./datasets/{tra_val}_info_vad_noise.npy", info_to_save)
+    output_txt.close()
 
 
 def audio_test():
@@ -144,6 +185,7 @@ def read_npy_test():
     print(len(train_mfccs))
     for i in range(10):
         print(train_mfccs[i].shape)
+        print(train_mfccs[1])
     train_mfccs = np.load("./datasets/valid_info.npy")
     print(train_mfccs)
 
@@ -171,7 +213,7 @@ if __name__ == '__main__':
     # create_file_list("metadata/UrbanSound8K.csv")
     # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="train")
     create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="valid")
-    # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="test")
+    create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="test")
     # read_npy_test()
     # audio_test()
     # detect_short()

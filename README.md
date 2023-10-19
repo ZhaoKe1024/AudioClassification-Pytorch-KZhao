@@ -17,7 +17,11 @@ MFCC特征+TDNN
 
 运行train_hst.py即可训练,训练中在”./runs/tdnn-MFCC/“文件夹下生成每个epoch中训练、验证的损失函数值、accuracy值，通过ploter.py读取并绘制折线图。
 
-为了提高数据的质量,之后打算裁剪掉静默的音频段,然后再做MFCC,未完待续
+为了提高数据的质量,之后打算裁剪掉静默的音频段,然后再做MFCC. 在utils/audio.py中，AudioSegment类实现了vad()和add_noise()函数。
+
+流程已实现，但是由于以上预处理要把所有的音频转换为MFCC然后存为一个npy文件，由于内存无法装下一次性处理过的这么多文件，因此处理过程中最好边写入边处理，方法是，把每一条音频的MFCC设置为固定shape(40, 174)，展开为一维向量，和标签一起写入txt文件中，读取的时候再reshape(40, 174)即可。txt文件中每行2+40*174列，分别是 label, pad_start, mfcc。
+
+
 
 # Reference
 1. 参考其代码结构: https://github.com/yeyupiaoling/AudioClassification-Pytorch
