@@ -15,16 +15,46 @@ from ackit.utils.audio import AudioSegment
 
 
 class UrbansoundDataset(Dataset):
-    def __init__(self, root, file_list="train", is_feat=False):
+    def __init__(self, root, file_mode="train", is_feat=False):
         self.root = root
-        self.file_list_path = file_list
+        self.file_list_path = file_mode
         self.is_feat = is_feat
         self.file_list = None
         self.label_list = None
         self.pad_start = None
-        self.file_list_init()
+        self.file_list_init_02(mode=file_mode)
 
-    def file_list_init(self):
+    def __getitem__(self, ind):
+        return self.file_list[ind], self.label_list[ind], self.pad_start[ind]
+
+    """
+    version 0.2
+    read the aligned MFCC file which is preprocessed already.
+    # @datetime: 2023-10-20 09:54 program block accomplished
+    """
+    def _getitem_from_mfcc_aligned(self, idx):
+        return self.file_list[idx], self.label_list[idx], self.pad_start[idx]
+
+    # @datetime: 2023-10-20 09:54 program block accomplished
+    def file_list_init_02(self, mode="train"):
+        self.label_list = []
+        self.pad_start = []
+        self.file_list = []
+        with open(f"./datasets/{mode}_vector.txt", 'r') as vec_file:
+            line = vec_file.readline()
+            while line:
+                parts = line.strip().split(' ')
+                # print(len(parts))  # 120003
+                self.label_list.append(int(parts[0]))
+                self.pad_start.append(int(parts[1]))
+                vector = np.array([float(x) for x in parts[2:]])
+                assert len(vector) == 40*3000, "the length is not matched"
+                self.file_list.append(vector.reshape(40, 3000))
+                line = vec_file.readline()
+        print(f"load {mode} mfcc vector:", len(self.file_list))
+        # print()
+
+    def file_list_init_01(self):
         if self.is_feat:
             file_mfccs = np.load(f"./datasets/{self.file_list_path}_mfcc.npy")
             file_info = np.load(f"./datasets/{self.file_list_path}_info.npy ")
@@ -54,9 +84,14 @@ class UrbansoundDataset(Dataset):
         #             self.label_list.append(int(parts[6]))
         #         line = csvfile.readline()
 
-    def __getitem__(self, ind):
-        return self.file_list[ind], self.label_list[ind], self.pad_start[ind]
-
+    """
+     version 0.1
+     根据音频路径列表，读取音频，转换为MFCC，然后通过collate_fn对齐MFCC
+     效率很低，速度很慢，IO跟不上GPU(4090)
+     reading the audio according to the audio path, then convert it to MFCC,
+     and then align MFCC through collate_fn,
+     but it is very low efficiency, slow speed, the speed of IO cannot keep up with GPU.
+    """
     def _getitem_from_wavfile(self, item):
         """废弃了! 除非返回在这里读取音频,但是真慢"""
         """ 由于音频数据长度不一，MFCC特征的第2维度(index=1)长度也不一样，需要collate_fn处理"""

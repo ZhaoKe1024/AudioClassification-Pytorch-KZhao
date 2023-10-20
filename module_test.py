@@ -5,6 +5,8 @@
 # @File : module_test.py
 # @Software: PyCharm
 """测试某些模块的正确性"""
+import os
+
 import librosa
 import soundfile
 import yaml
@@ -99,12 +101,30 @@ def plot_a_wav():
     plt.show()
 
 
+def stats_noise_track():
+    s_dcit = {1: 0}
+    for item in os.listdir("./datasets/noise"):
+        sample, sr = soundfile.read("./datasets/noise"+'/'+item)
+        if sample.ndim > 1:
+            print(sample.shape)
+            if sample.shape[1] in s_dcit:
+                s_dcit[sample.shape[1]] += 1
+            else:
+                s_dcit[sample.shape[1]] = 1
+                print(s_dcit)
+        else:
+            s_dcit[1] += 1
+    print("=========")
+    print(s_dcit)
+
+
 if __name__ == '__main__':
     # dataset_test()
+    stats_noise_track()
     # a = torch.randn((3, 3))
     # for i in range(4):
     # add_audio_test()
-    plot_a_wav()
+    # plot_a_wav()
     # add_audio_play_test()
     # b = torch.zeros((3, 8))
     # b[:, 2:5] = a

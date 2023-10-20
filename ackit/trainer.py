@@ -64,7 +64,7 @@ class HSTTrainer(object):
         # collate_fn = collate_fn_zero2_pad if is_feat else collate_fn_zero1_pad
         if is_train:
             self.train_dataset = UrbansoundDataset(root=self.configs.data_root,
-                                                   file_list="train",
+                                                   file_mode="train",
                                                    is_feat=is_feat)
             self.train_loader = DataLoader(self.train_dataset,
                                            batch_size=self.configs.dataset_conf.dataLoader.batch_size,
@@ -72,13 +72,13 @@ class HSTTrainer(object):
                                            num_workers=self.configs.dataset_conf.dataLoader.num_workers)
             print("create train valid test loader...")
         # 获取测试数据
-        self.valid_dataset = UrbansoundDataset(root=self.configs.data_root, file_list="valid",
+        self.valid_dataset = UrbansoundDataset(root=self.configs.data_root, file_mode="valid",
                                                is_feat=is_feat)
         self.valid_loader = DataLoader(self.valid_dataset, batch_size=self.configs.dataset_conf.dataLoader.batch_size,
                                        shuffle=True,
                                        num_workers=self.configs.dataset_conf.dataLoader.num_workers)
-
-        self.test_dataset = UrbansoundDataset(root=self.configs.data_root, file_list="test",
+        print("create valid loader")
+        self.test_dataset = UrbansoundDataset(root=self.configs.data_root, file_mode="test",
                                               is_feat=is_feat)
         self.test_loader = DataLoader(self.test_dataset, batch_size=self.configs.dataset_conf.dataLoader.batch_size,
                                       shuffle=False,
@@ -221,7 +221,8 @@ class HSTTrainer(object):
             valid_acc_list.append(val_acc)
             valid_loss_list.append(val_loss)
 
-            print("tim cost per epoch: ", timedelta(time.time() - start_time))
+            print("time cost per epoch: ", str(timedelta(seconds=(time.time() - start_time))))
+            print("seconds per epoch: ", time.time() - start_time)
 
             if avg_acc > best_score:
                 best_score = avg_acc

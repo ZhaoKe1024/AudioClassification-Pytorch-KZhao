@@ -40,8 +40,11 @@ class AudioSegment(object):
     def __init__(self, samples, sample_rate, resample=False, res_sr=16000):
         self._samples = _convert_samples_to_float32(samples)
         self._sample_rate = sample_rate
+        # version 0.2 (0: focus on the data preprocessing)
+        # considering the complexity of processing, currently all audio is converted to mono, which is a one-dimension vector
+        # 为了便于处理，现在要都转为单声道，一维向量
         if self._samples.ndim >= 2:
-            self._sample = np.mean(self._samples, axis=1)
+            self._samples = np.mean(self._samples, axis=1)
         if resample:
             self.resample(target_sample_rate=res_sr)
 
@@ -135,8 +138,13 @@ class AudioSegment(object):
             self._samples = resampy.resample(self._samples, self._sample_rate, target_sample_rate, filter=filter)
         self._sample_rate = target_sample_rate
 
+    def reduce_dim(self):
+        if self._samples.ndim > 1:
+            # print(self._samples.shape, self._samples.ndim)
+            self._samples = self._samples[:, np.random.randint(self._samples.ndim)]
+
     def vad(self, top_db=20, overlap=200):
-        self._sample = vad(self._sample, top_db=top_db, overlap=overlap)
+        self._samples = vad(self._samples, top_db=top_db, overlap=overlap)
 
     @classmethod
     def slice_from_file(cls, file, start=None, end=None):
@@ -447,6 +455,10 @@ def augment_audio(noises_path,
         # print(noise_path)
         # 读取噪声音频
         noise_segment = AudioSegment.slice_from_file(noise_path)
+        # version 0.2
+        # noise audio is converted to single track, too.
+        if noise_segment.samples.ndim > 1:
+            noise_segment.reduce_dim()  # 降维
         # 如果噪声采样率不等于audio_segment的采样率，则重采样
         if noise_segment._sample_rate != audio_segment._sample_rate:
             noise_segment.resample(audio_segment._sample_rate)
@@ -455,6 +467,7 @@ def augment_audio(noises_path,
         # 如果噪声的长度小于audio_segment的长度，则将噪声的前面的部分填充噪声末尾补长
         if noise_segment.duration < audio_segment.duration:
             diff_duration = audio_segment.num_samples - noise_segment.num_samples
+            # print(noise_segment.samples.shape, diff_duration)
             noise_segment._samples = np.pad(noise_segment._samples, (0, diff_duration), 'wrap')
         # 将噪声添加到audio_segment中，并将snr_dB调整到最小值和最大值之间
         audio_segment.add_noise(noise_segment, snr_dB)

@@ -60,7 +60,7 @@ def create_file_list(metafile_path):
 
 
 def pad_as_174(mfcc):
-    max_len = 1500
+    max_len = 3000
     if mfcc.shape[1] < max_len:
         row_num, col_num = mfcc.shape
         new_mfcc = np.zeros((row_num, max_len))
@@ -69,7 +69,7 @@ def pad_as_174(mfcc):
         new_mfcc[:, pad_start:pad_start + col_num] = mfcc
         return new_mfcc.reshape(1, 40 * max_len)[0], pad_start
     else:
-        print(mfcc.shape)
+        # print(mfcc.shape)
         return mfcc.reshape(1, 40*max_len)[0], 0
 
 
@@ -82,6 +82,7 @@ def create_mfcc_npy_data(root, tra_val="train"):
     想到一个办法，把所有数据展为40*174的向量，然后写入到txt里面，需要的时候再reshape回来
     :param dataest_path:
     :return:
+    @datetime: 2023-10-20 09:54 program block accomplished
     """
     is_vad, is_add_noise = True, True
     output_txt = open(f"./datasets/{tra_val}_vector.txt", 'w')
@@ -113,22 +114,18 @@ def create_mfcc_npy_data(root, tra_val="train"):
                 # print(librosa.feature.mfcc(y=X, sr=sr, n_mfcc=40).shape)  # (40, 173)
                 # mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sr, n_mfcc=40), axis=1)
                 # print(X.samples.shape)
-                if X.samples.ndim > 1:
-                    print(X.samples)
-                    break
-                print(X.samples.shape)
+                # print(X.samples.shape)
                 mfccs = librosa.feature.mfcc(y=X.samples, sr=16000, n_mfcc=40)
-                if mfccs.ndim > 2:
-                    print(mfccs.shape)
-                    break
-                if mfccs.shape[1]>1500:
-                    print(mfccs.shape)
-                    print(parts[0])
-                    continue
+                # if mfccs.ndim > 2:
+                #     print(mfccs.shape)
+                #     break
+                # if mfccs.shape[1]>1500:
+                #     print(mfccs.shape, parts[0])
+                #     continue
                 mfccs, pad_start = pad_as_174(mfccs)
-                if mfccs.ndim > 1:
-                    print(mfccs.shape)
-                    break
+                # if mfccs.ndim > 1:
+                #     print(mfccs.shape)
+                #     break
                 # label data
                 output_txt.write(parts[1] + ' ' + str(pad_start) + ' ' + ' '.join([str(x) for x in mfccs]) + ' ' + '\n')
                 idx += 1
@@ -211,9 +208,10 @@ def detect_short():
 if __name__ == '__main__':
     # ext_list()
     # create_file_list("metadata/UrbanSound8K.csv")
-    # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="train")
-    create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="valid")
-    create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="test")
+    create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="train")
+    # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="valid")
+    # print("-------------test-------------------")
+    # create_mfcc_npy_data("C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio", tra_val="test")
     # read_npy_test()
     # audio_test()
     # detect_short()
