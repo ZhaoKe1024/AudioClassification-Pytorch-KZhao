@@ -1,0 +1,28 @@
+description: "Hierarchical Spectrogram Transformer"
+data_root: "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/"
+data_list: "./datasets"
+use_model: "tdnn"
+train_list: "./datasets/train_list.txt"
+valid_list: "./datasets/valid_list.txt"
+test_list: "./datasets/test_list.txt"
+l2m: "./datasets/label2meta.json"
+train_conf:
+  max_epochs: 20
+  use_gpu: True
+  enable_amp: True
+  train_from_zero: True
+  save_epoch: 5
+dataset_conf:
+  sr: 16000
+  dataLoader:
+    batch_size: 128
+    num_workers: 0
+preprocess_conf:
+  feature_method: 'MFCC'
+optim_conf:
+  lr: 0.001
+  weight_decay: !!float 1e-5
+model_conf:
+  mfcc_size: 40
+
+load_epoch: False

@@ -29,7 +29,7 @@ from ackit.utils.utils import dict_to_object, plot_confusion_matrix
 logger = setup_logger(__name__)
 
 
-class HSTTrainer(object):
+class Trainer(object):
     def __init__(self, configs, use_gpu=True):
         self.configs = None
         if isinstance(configs, str):
@@ -63,6 +63,7 @@ class HSTTrainer(object):
         is_feat = True
         # collate_fn = collate_fn_zero2_pad if is_feat else collate_fn_zero1_pad
         if is_train:
+            print("create train loader...")
             self.train_dataset = UrbansoundDataset(root=self.configs.data_root,
                                                    file_mode="train",
                                                    is_feat=is_feat)
@@ -70,14 +71,14 @@ class HSTTrainer(object):
                                            batch_size=self.configs.dataset_conf.dataLoader.batch_size,
                                            shuffle=True,
                                            num_workers=self.configs.dataset_conf.dataLoader.num_workers)
-            print("create train valid test loader...")
+        print("create valid loader")
         # 获取测试数据
         self.valid_dataset = UrbansoundDataset(root=self.configs.data_root, file_mode="valid",
                                                is_feat=is_feat)
         self.valid_loader = DataLoader(self.valid_dataset, batch_size=self.configs.dataset_conf.dataLoader.batch_size,
                                        shuffle=True,
                                        num_workers=self.configs.dataset_conf.dataLoader.num_workers)
-        print("create valid loader")
+        print("create test loader")
         self.test_dataset = UrbansoundDataset(root=self.configs.data_root, file_mode="test",
                                               is_feat=is_feat)
         self.test_loader = DataLoader(self.test_dataset, batch_size=self.configs.dataset_conf.dataLoader.batch_size,
@@ -243,7 +244,7 @@ class HSTTrainer(object):
         self.model.eval()
         accuracies, losses, preds, labels = [], [], [], []
         with torch.no_grad():
-            for batch_id, (mfcc, label, _) in enumerate(tqdm(self.test_loader)):
+            for batch_id, (mfcc, label, _) in enumerate(tqdm(self.valid_loader)):
                 mfcc = mfcc.to(self.device).to(torch.float32)
                 label = label.to(self.device).long()
                 output = self.model(mfcc)

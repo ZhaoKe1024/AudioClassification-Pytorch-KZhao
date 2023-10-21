@@ -40,6 +40,7 @@ class UrbansoundDataset(Dataset):
         self.label_list = []
         self.pad_start = []
         self.file_list = []
+        print(f"reading {mode} mfcc...")
         with open(f"./datasets/{mode}_vector.txt", 'r') as vec_file:
             line = vec_file.readline()
             while line:

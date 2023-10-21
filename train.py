@@ -6,12 +6,14 @@
 # @Software: PyCharm
 import argparse
 
-from ackit.trainer import HSTTrainer
+from ackit.trainer import Trainer
+from ackit.trainer_transformer import TransformerTrainer
 from ackit.utils import utils
 
 
 def main():
-    trainer = HSTTrainer(configs="./configs/tdnn.yaml", use_gpu=True)
+    # trainer = TransformerTrainer(configs="./configs/transformer.yaml", use_gpu=True)
+    trainer = Trainer(configs="./configs/tdnn.yaml", use_gpu=True)
     trainer.train()
     # trainer.print_configs()
     # if not args.load_epoch:

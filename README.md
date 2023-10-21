@@ -1,5 +1,5 @@
 # 声音分类
-
+This repository contains the implementation (in PyTorch) of some models for Sound/Audio Classification.
 
 MFCC特征+TDNN
 ### 数据预处理过程：
