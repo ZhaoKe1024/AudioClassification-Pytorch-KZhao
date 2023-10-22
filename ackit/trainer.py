@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from ackit.models.hst import HSTModel
+# from ackit.models.hst import HSTModel
 from ackit.models.tdnn import TDNN
 from ackit.utils.logger import setup_logger
 from ackit.utils.metrics import accuracy
