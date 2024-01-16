@@ -5,6 +5,8 @@
 # @File : sound_reader.py
 # @Software: PyCharm
 import random
+import numpy as np
+import librosa
 import torch
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
@@ -22,7 +24,7 @@ def get_former_loader(istrain=True, istest=False, configs=None, meta2label=None,
         file_paths = []
         mtid_list = []
         mtype_list = []
-        with open("../datasets/train_list.txt", 'r') as fin:
+        with open("./datasets/train_list.txt", 'r') as fin:
             train_path_list = fin.readlines()
             if isdemo:
                 train_path_list = random.choices(train_path_list, k=200)
@@ -47,7 +49,7 @@ def get_former_loader(istrain=True, istest=False, configs=None, meta2label=None,
         mtid_list = []
         mtype_list = []
         y_true_list = []
-        with open("../datasets/test_list.txt", 'r') as fin:
+        with open("./datasets/test_list.txt", 'r') as fin:
             test_path_list = fin.readlines()
             if isdemo:
                 test_path_list = random.choices(test_path_list, k=20)
@@ -104,3 +106,23 @@ class FormerReader(Dataset):
 
     def __len__(self):
         return len(self.files)
+
+    def load_wav_2mel(self, wav_path):
+        # print(wav_path)
+        y, sr = librosa.core.load(wav_path, sr=16000)
+        y = wav_slice_padding(y, save_len=self.configs["feature"]["wav_length"])
+        x_mel = self.w2m(torch.from_numpy(y.T))
+        return torch.tensor(x_mel, device=self.device).transpose(0, 1).to(torch.float32)
+
+
+def wav_slice_padding(old_signal, save_len=160000):
+    new_signal = np.zeros(save_len)
+    if old_signal.shape[0] < save_len:
+        resi = save_len - old_signal.shape[0]
+        # print("resi:", resi)
+        new_signal[:old_signal.shape[0]] = old_signal
+        new_signal[old_signal.shape[0]:] = old_signal[-resi:][::-1]
+    elif old_signal.shape[0] > save_len:
+        posi = random.randint(0, old_signal.shape[0] - save_len)
+        new_signal = old_signal[posi:posi+save_len]
+    return new_signal

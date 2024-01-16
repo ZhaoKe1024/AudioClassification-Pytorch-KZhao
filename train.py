@@ -8,8 +8,8 @@ from ackit.trainer_ConvEncoder import TrainerEncoder
 
 
 def main():
-    trainer = TrainerEncoder(configs="./configs/tdnn.yaml")
-    trainer.train_encoder(istrain=True)
+    trainer = TrainerEncoder(configs="./configs/autoencoder.yaml", istrain=False)
+    trainer.train_encoder()
 
 
 if __name__ == '__main__':

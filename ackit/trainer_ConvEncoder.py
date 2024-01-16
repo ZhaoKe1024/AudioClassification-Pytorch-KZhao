@@ -16,47 +16,45 @@ import torch.optim as optim
 from ackit.utils.utils import weight_init
 from ackit.data_utils.featurizer import Wave2Mel
 from ackit.models.autoencoder import ConvEncoder
-from ackit.data_utils.sound_reader import FormerReader, get_former_loader
+from ackit.data_utils.sound_reader import get_former_loader
 
 
 class TrainerEncoder(object):
-    def __init__(self, configs="../configs/conformer.yaml", istrain=True, demo_test=False):
+    def __init__(self, configs="../configs/conformer.yaml", istrain=True):
         self.configs = None
         with open(configs) as stream:
             self.configs = yaml.safe_load(stream)
-        os.makedirs(self.configs["model_directory"], exist_ok=True)
         self.device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
 
         self.num_epoch = self.configs["fit"]["epochs"]
         self.timestr = time.strftime("%Y%m%d%H%M", time.localtime())
-        self.demo_test = demo_test
+        self.demo_test = not istrain
         if istrain:
             self.run_save_dir = self.configs[
                                     "run_save_dir"] + self.timestr + f'_v3tfs_w2m/'
-            # if not self.demo_test:
-            #     os.makedirs(self.run_save_dir, exist_ok=True)
+            if istrain:
+                os.makedirs(self.run_save_dir, exist_ok=True)
         self.w2m = Wave2Mel(16000)
 
-        with open("../datasets/metadata2label.json", 'r', encoding='utf_8') as fp:
+        with open("./datasets/metadata2label.json", 'r', encoding='utf_8') as fp:
             self.meta2label = json.load(fp)
         self.id2map = {5: "valve", 4: "slider", 3: "pump", 2: "fan", 1: "ToyConveyor", 0: "ToyCar"}
         self.mt2id = {"valve": 5, "slider": 4, "pump": 3, "fan": 2, "ToyConveyor": 1, "ToyCar": 0}
-        self.cls = True
-        self.k = 3
 
-    def train_encoder(self, istrain=True):
+    def train_encoder(self):
         model = ConvEncoder(input_channel=1, input_length=self.configs["model"]["input_length"],
-                                 input_dim=self.configs["feature"]["n_mels"],
-                                 class_num=self.configs["model"]["mtid_class_num"],
-                                 class_num1=self.configs["model"]["type_class_num"]).to(self.device)
+                            input_dim=self.configs["feature"]["n_mels"],
+                            class_num=self.configs["model"]["mtid_class_num"],
+                            class_num1=self.configs["model"]["type_class_num"]).to(self.device)
         model.apply(weight_init)
         class_loss = nn.CrossEntropyLoss().to(self.device)
         print("All model and loss are on device:", self.device)
-        optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=1e-4)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=5, eta_min=5e-5)
 
-        train_loader, _ = get_former_loader(train=True, test=False, configs=self.configs, meta2label=self.meta2label,
-                                                      isdemo=self.demo_test, exclude=None)
+        train_loader, _ = get_former_loader(istrain=True, istest=False, configs=self.configs,
+                                            meta2label=self.meta2label,
+                                            isdemo=self.demo_test)
         history1 = []
         for epoch in range(self.num_epoch):
             model.train()
@@ -64,7 +62,7 @@ class TrainerEncoder(object):
                 x_mel = x_mel.unsqueeze(1) / 255.
                 optimizer.zero_grad()
                 mtid = torch.tensor(mtid, device=self.device)
-                feat, mtid_pred = model(input_mel=x_mel, label_vec=mtid)
+                feat, mtid_pred = model(input_mel=x_mel, class_vec=mtid, coarse_cls=False, fine_cls=True)
                 # recon_loss = self.recon_loss(recon_spec, x_mel)
                 mtid_pred_loss = class_loss(mtid_pred, mtid)
                 mtid_pred_loss.backward()
