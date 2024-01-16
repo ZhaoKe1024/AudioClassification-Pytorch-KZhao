@@ -21,7 +21,7 @@ from ackit.utils.reader import UrbansoundDataset, collate_fn_zero1_pad
 
 def collate_and_mask_test():
     root = "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K"
-    train_list = "./datasets/train_list.txt"
+    train_list = "./data_entities/train_list.txt"
     dataset = UrbansoundDataset(root=root, file_list=train_list, is_feat=False)
     dl = DataLoader(dataset, batch_size=16, shuffle=True, collate_fn=collate_fn_zero1_pad)
     af = AudioFeaturizer("MFCC")
@@ -104,7 +104,7 @@ def plot_a_wav():
 def stats_noise_track():
     s_dcit = {1: 0}
     for item in os.listdir("./datasets/noise"):
-        sample, sr = soundfile.read("./datasets/noise"+'/'+item)
+        sample, sr = soundfile.read("./data_entities/noise"+'/'+item)
         if sample.ndim > 1:
             print(sample.shape)
             if sample.shape[1] in s_dcit:

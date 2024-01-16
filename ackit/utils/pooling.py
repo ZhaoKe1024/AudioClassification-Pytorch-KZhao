@@ -43,7 +43,7 @@ class SelfAttentivePooling(nn.Module):
         self.linear2 = nn.Conv1d(bottleneck_dim, in_dim, kernel_size=1)  # equals V and k in the paper
 
     def forward(self, x):
-        # DON'T use ReLU here! In experiments, I find ReLU hard to converge.
+        # DON'T use ReLU here! In experiments_densegantt, I find ReLU hard to converge.
         alpha = torch.tanh(self.linear1(x))
         alpha = torch.softmax(self.linear2(alpha), dim=2)
         mean = torch.sum(alpha * x, dim=2)
@@ -62,7 +62,7 @@ class AttentiveStatsPool(nn.Module):
         self.linear2 = nn.Conv1d(bottleneck_dim, in_dim, kernel_size=1)  # equals V and k in the paper
 
     def forward(self, x):
-        # DON'T use ReLU here! In experiments, I find ReLU hard to converge.
+        # DON'T use ReLU here! In experiments_densegantt, I find ReLU hard to converge.
         alpha = torch.tanh(self.linear1(x))
         alpha = torch.softmax(self.linear2(alpha), dim=2)
         mean = torch.sum(alpha * x, dim=2)

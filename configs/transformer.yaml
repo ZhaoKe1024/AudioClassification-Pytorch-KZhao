@@ -1,11 +1,11 @@
 description: "Hierarchical Spectrogram Transformer"
 data_root: "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/"
-data_list: "./datasets"
+data_list: "./data_entities"
 use_model: "tdnn"
-train_list: "./datasets/train_list.txt"
-valid_list: "./datasets/valid_list.txt"
-test_list: "./datasets/test_list.txt"
-l2m: "./datasets/label2meta.json"
+train_list: "./data_entities/train_list.txt"
+valid_list: "./data_entities/valid_list.txt"
+test_list: "./data_entities/test_list.txt"
+l2m: "./data_entities/label2meta.json"
 train_conf:
   max_epochs: 20
   use_gpu: True

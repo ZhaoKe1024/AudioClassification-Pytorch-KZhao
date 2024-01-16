@@ -13,6 +13,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def weight_init(m):
+    if isinstance(m, torch.nn.Linear):
+        torch.nn.init.xavier_normal_(m.weight)
+        # if any(m.bias):
+        # torch.nn.init.constant_(m.bias, 0.)
+    elif isinstance(m, torch.nn.Conv2d):
+        torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+    elif isinstance(m, torch.nn.BatchNorm2d):
+        torch.nn.init.constant_(m.weight, 1.)
+        # torch.nn.init.constant_(m.bias, 0.)
+
+
 def load_yaml(file_path='./config.yaml'):
     with open(file_path, encoding='utf_8') as f:
         params = yaml.load(f, Loader=yaml.FullLoader)

@@ -158,8 +158,8 @@ def create_mfcc_npy_data(root, tra_val="train"):
         #         new_mfcc[:, pad_start:pad_start + col_num] = mfcc
         #         mfccs_to_save[i] = new_mfcc
         #         info_to_save[i][1] = pad_start
-        # np.save(f"./datasets/{tra_val}_mfcc_vad_noise.npy", mfccs_to_save)
-        # np.save(f"./datasets/{tra_val}_info_vad_noise.npy", info_to_save)
+        # np.save(f"./data_entities/{tra_val}_mfcc_vad_noise.npy", mfccs_to_save)
+        # np.save(f"./data_entities/{tra_val}_info_vad_noise.npy", info_to_save)
     output_txt.close()
 
 
