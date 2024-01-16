@@ -16,7 +16,6 @@ import torch.optim as optim
 
 from ackit.trainer_setting import get_model
 from ackit.utils.utils import weight_init, load_ckpt
-from ackit.models.autoencoder import ConvEncoder
 from ackit.data_utils.sound_reader import get_former_loader
 
 
