@@ -5,12 +5,27 @@
 # @File : train.py
 # @Software: PyCharm
 from ackit.trainer_ConvEncoder import TrainerEncoder
+from ackit.trainer_tdnn import TrainerTDNN
 
 
-def main():
+def run_encoder_classification():
     trainer = TrainerEncoder(configs="./configs/autoencoder.yaml", istrain=False)
     trainer.train_encoder()
 
 
+def run_tdnn_classification():
+    # istrain设为False，则不创建输出的文件夹，并且只读取一点数据用来测试，测试是否有bug。
+    trainer = TrainerTDNN(configs="./configs/autoencoder.yaml", istrain=True)
+    trainer.train()
+
+
+def test():
+    load_epoch = 14
+    resume_model = f"./runs/tdnn/202401162007_tdnn/model_epoch_{load_epoch}"
+    trainer = TrainerTDNN(configs="./configs/autoencoder.yaml", istrain=False)
+    trainer.test_tsne(resume_model_path=resume_model, load_epoch=load_epoch)
+
+
 if __name__ == '__main__':
-    main()
+    # run_tdnn_classification()
+    test()

@@ -2,6 +2,7 @@ __pycache__/
 .idea/
 /datasets/
 /models/
+/run/
 /runs/
 /tools/
 /.ipynb_checkpoints/

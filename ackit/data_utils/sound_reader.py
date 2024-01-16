@@ -27,7 +27,7 @@ def get_former_loader(istrain=True, istest=False, configs=None, meta2label=None,
         with open("./datasets/train_list.txt", 'r') as fin:
             train_path_list = fin.readlines()
             if isdemo:
-                train_path_list = random.choices(train_path_list, k=200)
+                train_path_list = random.choices(train_path_list, k=2000)
             for item in train_path_list:
                 parts = item.strip().split('\t')
                 machine_type_id = int(parts[1])

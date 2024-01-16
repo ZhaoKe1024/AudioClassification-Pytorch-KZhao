@@ -21,14 +21,12 @@ def get_model(use_model, configs, istrain=True):
                             class_num=configs["model"]["mtid_class_num"],
                             class_num1=configs["model"]["type_class_num"])
     elif use_model == "tdnn":
-        model = TDNN(num_class=configs["mtid_class_num"], input_size=configs["model"]["input_length"],
+        model = TDNN(num_class=configs["class_num"], input_size=configs["model"]["input_length"],
                      channels=configs["model"]["input_dim"])
-        # print(model)
     else:
         raise ValueError("this model is not found!!")
     if istrain:
         model.apply(weight_init)
-        # amp_scaler = torch.cuda.amp.GradScaler(init_scale=1024)
     return model
 
 
