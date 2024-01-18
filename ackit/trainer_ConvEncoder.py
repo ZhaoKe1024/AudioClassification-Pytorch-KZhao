@@ -13,6 +13,8 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+from ackit.trainer_setting import get_model
 from ackit.utils.utils import weight_init
 from ackit.models.autoencoder import ConvEncoder
 from ackit.data_utils.sound_reader import get_former_loader
@@ -37,10 +39,8 @@ class TrainerEncoder(object):
             self.meta2label = json.load(fp)
 
     def train_encoder(self):
-        model = ConvEncoder(input_channel=1, input_length=self.configs["model"]["input_length"],
-                            input_dim=self.configs["feature"]["n_mels"],
-                            class_num=self.configs["model"]["mtid_class_num"],
-                            class_num1=self.configs["model"]["type_class_num"]).to(self.device)
+        use_model = ["conv_encoder_decoder", "mobilenetv2"]
+        model = get_model(use_model=use_model[1], configs=self.configs, istrain=True).to(self.device)
         model.apply(weight_init)
         class_loss = nn.CrossEntropyLoss().to(self.device)
         print("All model and loss are on device:", self.device)

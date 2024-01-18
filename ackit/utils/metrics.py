@@ -32,4 +32,5 @@ def get_heat_map(pred_matrix, label_vec, savepath):
     plt.xlabel("predict label")
     plt.ylabel("true label")
     plt.savefig(savepath)
-    plt.show()
+    plt.close()
+    # plt.show()

@@ -8,6 +8,7 @@ import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from ackit.models.autoencoder import ConvEncoder
+from ackit.models.mobilenetv2 import MobileNetV2
 from ackit.models.tdnn import TDNN
 from ackit.modules.scheduler import WarmupCosineSchedulerLR
 from ackit.utils.utils import weight_init
@@ -23,6 +24,8 @@ def get_model(use_model, configs, istrain=True):
     elif use_model == "tdnn":
         model = TDNN(num_class=configs["class_num"], input_size=configs["model"]["input_length"],
                      channels=configs["model"]["input_dim"])
+    elif use_model == "mobilenetv2":
+        model = MobileNetV2(dc=1, n_class=configs["class_num"])
     else:
         raise ValueError("this model is not found!!")
     if istrain:
