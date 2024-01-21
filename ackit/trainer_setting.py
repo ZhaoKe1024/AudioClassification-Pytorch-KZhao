@@ -8,8 +8,10 @@ import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from ackit.models.autoencoder import ConvEncoder
+from ackit.models.mobilefacenet import MobileFaceNet
 from ackit.models.mobilenetv2 import MobileNetV2
 from ackit.models.tdnn import TDNN
+from ackit.models.vae import ConvVAE
 from ackit.modules.scheduler import WarmupCosineSchedulerLR
 from ackit.utils.utils import weight_init
 
@@ -26,6 +28,11 @@ def get_model(use_model, configs, istrain=True):
                      channels=configs["model"]["input_dim"])
     elif use_model == "mobilenetv2":
         model = MobileNetV2(dc=1, n_class=configs["class_num"])
+    elif use_model == "mobilefacenet":
+        model = MobileFaceNet(inp=1, num_class=configs["class_num"])
+    elif use_model == "vae":
+        model = ConvVAE(input_channel=1, input_length=configs["model"]["input_length"],
+                        input_dim=configs["feature"]["n_mels"])
     else:
         raise ValueError("this model is not found!!")
     if istrain:

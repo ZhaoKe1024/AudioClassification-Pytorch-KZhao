@@ -30,7 +30,7 @@ class TrainerTDNN():
         self.demo_test = not istrain
         if istrain:
             self.run_save_dir = self.configs[
-                                    "run_save_dir"] + "tdnn/" +self.timestr + f'_tdnn/'
+                                    "run_save_dir"] + "tdnn/" + self.timestr + f'_tdnn/'
             if istrain:
                 os.makedirs(self.run_save_dir, exist_ok=True)
         with open("./datasets/metadata2label.json", 'r', encoding='utf_8') as fp:
@@ -87,7 +87,7 @@ class TrainerTDNN():
         model.eval()
         print("---------------train dataset-------------")
         train_loader, _ = get_former_loader(istrain=True, istest=False, configs=self.configs,
-                                         meta2label=self.meta2label, isdemo=True)
+                                            meta2label=self.meta2label, isdemo=True)
 
         with torch.no_grad():
             metrics_input = None
@@ -124,4 +124,3 @@ class TrainerTDNN():
             # print("TSNE finish.")
             # plot_embedding_2D(result2D, mtids, "t-SNT for type and id",
             #                   resume_model_path + f'/TSNE_mtid_epoch{load_epoch}.png')
-
