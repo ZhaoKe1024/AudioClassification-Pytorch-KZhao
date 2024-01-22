@@ -2,7 +2,9 @@
 This repository contains the implementation (in PyTorch) of some models for Sound/Audio Classification.
 
 MFCC特征MelSpectrogram+TDNN
-数据均为9s的（频谱长度288，波形长度147000），或者10s长度309，11s长度313。采样率均为16000。
+模型默认参数：数据均为9s的（频谱长度288，波形长度147000），或者10s长度309，11s长度313。采样率均为16000，自己修改参数。
+
+框架：模型均在目录“./ackit/models/”下。
 
 修改train.py中的文件，调用./ackit/trainer_***.py中的训练、测试代码。
 ```commandline

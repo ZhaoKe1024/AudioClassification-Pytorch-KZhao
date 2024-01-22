@@ -52,3 +52,15 @@ class ArcMarginProduct(nn.Module):
         output = (one_hot * phi) + ((1.0 - one_hot) * cosine)
         output = output * self.s
         return output
+
+
+class ContrastiveLoss(nn.Module):
+    def __init__(self, margin=1.0):
+        super().__init__()
+        self.margim = margin
+        self.relu = nn.ReLU()
+
+    def forward(self, anchor, pos, neg):
+        part1 = (anchor - pos).pow(2).sum(dim=1)
+        part2 = (anchor - neg).pow(2).sum(dim=1)
+        return self.relu(part1 - part2 + self.margim).mean()
