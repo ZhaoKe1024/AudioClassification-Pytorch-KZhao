@@ -48,6 +48,11 @@ def stat_coughvid():
 
 
 def read_labels_from_csv():
+    """
+
+    groupby: https://zhuanlan.zhihu.com/p/101284491
+    :return:
+    """
     metainfo_path = "D:/DATAS/Medical/COUGHVID-public_dataset_v3/coughvid_20211012/metadata_compiled.csv"
     column_names = ["uuid", "respiratory_condition", "fever_muscle_pain", "status", "status_SSL", ]
     pd_metainfo = pd.read_csv(metainfo_path, delimiter=',', header=0, index_col=0)
@@ -58,6 +63,7 @@ def read_labels_from_csv():
     pd_status_stat = list(pd_status.groupby("status"))
     for stat_item in pd_status_stat:
         print(stat_item[0], ': ', len(stat_item[1]))
+    return pd_status["status"].to_numpy()
     # print("info group by status:\n", list(pd_status_stat))
 
 
@@ -72,14 +78,16 @@ class CoughVID_Dataset(Dataset):
         self.label_list = label_list
         self.wav_list = []
         self.spec_list = []
+        for item in path_list:
+            self.append_wav(item)
 
     def __getitem__(self, ind):
-        return self.wav_list[ind], self.spec_list[ind],
+        return self.wav_list[ind], self.spec_list[ind], self.label_list[ind]
 
     def __len__(self):
         return len(self.path_list)
 
-    def read_wav(self, file_path):
+    def append_wav(self, file_path):
         x_wav, _ = librosa.core.load(self.root_path+file_path)
         self.wav_list.append(torch.tensor(x_wav, device=self.device).to(torch.float32))
         y = wav_slice_padding(x_wav, save_len=self.configs["feature"]["wav_length"])
@@ -91,4 +99,7 @@ class CoughVID_Dataset(Dataset):
 if __name__ == '__main__':
     # ext_list()
     # stat_coughvid()
-    read_labels_from_csv()
+    label_list = read_labels_from_csv()
+    print(label_list.shape)
+    cough_dataset = CoughVID_Dataset(label_list=label_list)
+
