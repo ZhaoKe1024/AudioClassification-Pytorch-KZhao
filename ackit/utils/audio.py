@@ -474,6 +474,24 @@ def augment_audio(noises_path,
     return audio_segment
 
 
+def demo_plot_waveform():
+    # print(wav_path)
+    wav_path = "D:/datasets/UrbanSound8K/UrbanSound8K/audio/fold1/7061-6-0-0.wav"
+    y, sr = librosa.core.load(wav_path, sr=16000)
+
+    # y = wav_slice_padding(y, save_len=self.configs["feature"]["wav_length"])
+    # x_mel = self.w2m(torch.from_numpy(y.T))
+    # return torch.tensor(x_mel, device=self.device).transpose(0, 1).to(torch.float32)
+    plt.figure(0)
+    print(y.shape)
+    # r, c = .shape
+    plt.plot(range(len(y)), y, c='black')
+    # plt.plot(range(c), wav_data[1, :], c='b')
+    plt.xticks([])
+    plt.yticks([])
+    plt.savefig("./waveform.png")
+
+
 def demo_plot_spec():
     file_path = "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K/audio/fold1/7061-6-0-0.wav"
     wav_data = get_spectrogram(file_path)
@@ -486,4 +504,5 @@ def demo_plot_spec():
 
 
 if __name__ == '__main__':
-    demo_plot_spec()
+    demo_plot_waveform()
+    # demo_plot_spec()

@@ -10,6 +10,8 @@ import librosa
 import torch
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
+
+from ackit.data_utils.audio import wav_slice_padding
 from ackit.data_utils.featurizer import Wave2Mel
 
 
@@ -113,16 +115,3 @@ class FormerReader(Dataset):
         y = wav_slice_padding(y, save_len=self.configs["feature"]["wav_length"])
         x_mel = self.w2m(torch.from_numpy(y.T))
         return torch.tensor(x_mel, device=self.device).transpose(0, 1).to(torch.float32)
-
-
-def wav_slice_padding(old_signal, save_len=160000):
-    new_signal = np.zeros(save_len)
-    if old_signal.shape[0] < save_len:
-        resi = save_len - old_signal.shape[0]
-        # print("resi:", resi)
-        new_signal[:old_signal.shape[0]] = old_signal
-        new_signal[old_signal.shape[0]:] = old_signal[-resi:][::-1]
-    elif old_signal.shape[0] > save_len:
-        posi = random.randint(0, old_signal.shape[0] - save_len)
-        new_signal = old_signal[posi:posi+save_len]
-    return new_signal

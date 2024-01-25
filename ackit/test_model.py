@@ -2,8 +2,13 @@
 # @Author : ZhaoKe
 # @Time : 2024-01-21 22:23
 import yaml
+import numpy as np
+import matplotlib.pyplot as plt
+import librosa
 import torch
 import torch.nn as nn
+
+from ackit.models.tdnn import TDNN_Extractor
 from ackit.models.vae import ConvVAE, vae_loss
 from ackit.models.mobilefacenet import MobileFaceNet
 from ackit.trainer_setting import get_model
@@ -38,6 +43,20 @@ def test_mfn():
     print(feat.shape)
 
 
+def test_tdnn_eval():
+    wav_path = "D:/DATAS/Medical/COUGHVID-public_dataset_v3/coughvid_20211012/00d5c907-bae4-4747-971d-a231099c4bfa.wav"
+    x_wav, sr = librosa.load(wav_path, sr=16000)
+    tdnn_extractor = TDNN_Extractor().to(device)
+    x_wav = torch.from_numpy(x_wav[np.newaxis, np.newaxis, :]).to(device)
+    print(len(x_wav))
+    x_feat = tdnn_extractor(x_wav)
+    print(x_feat.shape)
+    plt.figure(0)
+    plt.imshow(x_feat.squeeze().data.cpu().numpy())
+    plt.show()
+
+
 if __name__ == '__main__':
-    test_vae()
+    # test_vae()
+    test_tdnn_eval()
     # test_mfn()

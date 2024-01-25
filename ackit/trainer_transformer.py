@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 from ackit.models.transformer import Transformer, subsequent_mask
 from ackit.utils.metrics import accuracy
-from ackit.utils.reader import UrbansoundDataset
+from ackit.data_utils.reader import UrbansoundDataset
 from ackit.utils.utils import dict_to_object, plot_confusion_matrix
 
 

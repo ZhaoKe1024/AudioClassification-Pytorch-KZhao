@@ -7,16 +7,13 @@
 """测试某些模块的正确性"""
 import os
 
-import librosa
 import soundfile
-import yaml
-from IPython.lib.display import Audio
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 from ackit.utils.audio import vad, augment_audio, AudioSegment
 from ackit.utils.featurizer import AudioFeaturizer
-from ackit.utils.reader import UrbansoundDataset, collate_fn_zero1_pad
+from ackit.data_utils.reader import UrbansoundDataset, collate_fn_zero1_pad
 
 
 def collate_and_mask_test():

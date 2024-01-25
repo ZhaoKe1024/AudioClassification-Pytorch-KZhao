@@ -23,7 +23,7 @@ from tqdm import tqdm
 from ackit.models.tdnn import TDNN
 from ackit.utils.logger import setup_logger
 from ackit.utils.metrics import accuracy
-from ackit.utils.reader import UrbansoundDataset
+from ackit.data_utils.reader import UrbansoundDataset
 from ackit.utils.utils import dict_to_object, plot_confusion_matrix
 
 logger = setup_logger(__name__)

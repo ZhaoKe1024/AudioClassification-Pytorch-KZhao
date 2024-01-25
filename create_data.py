@@ -16,18 +16,6 @@ import soundfile
 from ackit.utils.audio import vad, augment_audio, AudioSegment
 
 
-def ext_list():
-    root = "E:/DATAS/medicaldata/COUGHVID-public_dataset_v3/coughvid_20211012"
-    ext_dict = dict()
-    for item in os.listdir(root):
-        ext = item.split('.')[-1]
-        if ext not in ext_dict:
-            ext_dict[ext] = 1
-        else:
-            ext_dict[ext] += 1
-    print(ext_dict)
-
-
 def create_file_list(metafile_path):
     root = "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K"
     # train_list = []
