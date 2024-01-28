@@ -4,6 +4,9 @@
 # @Author: ZhaoKe
 # @File : trainer_ConvEncoder.py
 # @Software: PyCharm
+"""
+
+"""
 import os
 import yaml
 import time
@@ -79,3 +82,6 @@ class TrainerEncoder(object):
             if epoch >= self.configs["model"]["start_scheduler_epoch"]:
                 scheduler.step()
         print("============== END TRAINING ==============")
+
+    def train_decoder(self):
+        pass

@@ -53,7 +53,7 @@ def read_labels_from_csv():
     groupby: https://zhuanlan.zhihu.com/p/101284491
     :return:
     """
-    metainfo_path = "D:/DATAS/Medical/COUGHVID-public_dataset_v3/coughvid_20211012/metadata_compiled.csv"
+    metainfo_path = "G:/DATAS-Medical/COUGHVID-public_dataset_v3/coughvid_20211012/metadata_compiled.csv"
     column_names = ["uuid", "respiratory_condition", "fever_muscle_pain", "status", "status_SSL", ]
     pd_metainfo = pd.read_csv(metainfo_path, delimiter=',', header=0, index_col=0)
     pd_status = pd_metainfo[["uuid", "status"]]
@@ -101,5 +101,5 @@ if __name__ == '__main__':
     # stat_coughvid()
     label_list = read_labels_from_csv()
     print(label_list.shape)
-    cough_dataset = CoughVID_Dataset(label_list=label_list)
+    # cough_dataset = CoughVID_Dataset(label_list=label_list)
 
