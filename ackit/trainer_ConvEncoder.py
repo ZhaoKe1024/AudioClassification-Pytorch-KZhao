@@ -34,7 +34,7 @@ class TrainerEncoder(object):
         self.run_save_dir = self.configs[
                                 "run_save_dir"] + '/'
         if istrain:
-            self.run_save_dir += self.timestr + f'_ptvae/'
+            self.run_save_dir += self.timestr + f'_ptvae_lr-3/'
             if not isdemo:
                 os.makedirs(self.run_save_dir, exist_ok=True)
 
@@ -42,10 +42,15 @@ class TrainerEncoder(object):
             self.meta2label = json.load(fp)
         self.pretrain_model = None
         self.model = None
+        self.trainloader = None
 
-    def __setup_datasets(self):
-        self.trainloader, _ = get_former_loader(istrain=True, istest=False,
-                                                meta2label=self.meta2label, configs=self.configs, isdemo=self.demo_test)
+    def __setup_datasets(self, evaluate=False):
+        if evaluate:
+            self.trainloader, _ = get_former_loader(istrain=True, istest=False,
+                                                    meta2label=self.meta2label, configs=self.configs, isdemo=True)
+        else:
+            self.trainloader, _ = get_former_loader(istrain=True, istest=False,
+                                                    meta2label=self.meta2label, configs=self.configs, isdemo=False)
 
     def __setup_models(self, pretrain=True):
         self.model = get_model("cnn_classifier", self.configs, istrain=True)
@@ -53,14 +58,14 @@ class TrainerEncoder(object):
             self.__load_pretrain(resume_path="../runs/VAE/model_epoch_12")
             self.pretrain_model.to(self.device)
         self.model.to(self.device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=5, eta_min=5e-5)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.num_epoch, eta_min=5e-5)
         self.class_loss = nn.CrossEntropyLoss().to(self.device)
         print("All model and loss are on device:", self.device)
 
     def train_classifier(self):
         setup_seed(3407)
-        self.__setup_datasets()
+        self.__setup_datasets(evaluate=False)
         self.__setup_models(pretrain=True)
 
         history1 = []
@@ -72,10 +77,10 @@ class TrainerEncoder(object):
                 mtype = torch.tensor(mtype, device=self.device)
                 # print(x_mel.shape, mtype.shape)
                 with torch.no_grad():
-                    x_mel = self.pretrain_model(x_mel, featmap_only=True)
+                    featmap = self.pretrain_model(x_mel, featmap_only=True)
                 # print(x_mel.shape, mtype.shape)
                 self.optimizer.zero_grad()
-                mtid_pred = self.model(x_mel)
+                mtid_pred, _ = self.model(featmap)
                 pred_loss = self.class_loss(mtid_pred, mtype)
 
                 pred_loss.backward()
@@ -106,26 +111,67 @@ class TrainerEncoder(object):
         load_epoch = 12
         load_ckpt(self.pretrain_model, cvae_model_path, load_epoch=load_epoch)
 
-    def plot_reduction(self, resume_path="202404181142_ptvae"):
+    def __setup_evaluate(self, resume_path="202404181142_ptvae", load_epoch=119):
         setup_seed(3407)
-        self.__setup_datasets()
-        self.__load_pretrain(resume_path="../runs/VAE/model_epoch_12")
-        self.pretrain_model.to(self.device)
+        if self.trainloader is None:
+            self.__setup_datasets(evaluate=True)
+        if self.pretrain_model is None:
+            self.__load_pretrain(resume_path="../runs/VAE/model_epoch_12")
+            self.pretrain_model.to(self.device)
+            self.pretrain_model.eval()
         if self.model is None:
-            self.model = get_model("vae", configs=self.configs, istrain=False).to(self.device)
-            load_ckpt(self.model, self.run_save_dir+resume_path, load_epoch=79)
-        self.model.eval()
+            self.model = get_model("cnn_classifier", configs=self.configs, istrain=False).to(self.device)
+            load_ckpt(self.model, self.run_save_dir + resume_path + f"/model_epoch_{load_epoch}", load_epoch=load_epoch)
+            self.model.eval()
+
+    def plot_reduction(self, resume_path="202404181142_ptvae", load_epoch=119):
+        self.__setup_evaluate(resume_path, load_epoch)
+        tsne_input = None
+        labels = None
         for x_idx, (x_mel, mtype, _) in enumerate(tqdm(self.trainloader, desc="Training")):
             x_mel = x_mel.unsqueeze(1) / 255.
-            x_mel = x_mel.to(self.device)
+            x_mel.to(self.device)
             mtype = torch.tensor(mtype, device=self.device)
             # print(x_mel.shape, mtype.shape)
             with torch.no_grad():
-                x_mel = self.pretrain_model(x_mel, featmap_only=True)
-            # print(x_mel.shape, mtype.shape)
-            self.optimizer.zero_grad()
-            mtid_pred = self.model(x_mel)
+                featmap = self.pretrain_model(x_mel, featmap_only=True)
 
+            _, fm = self.model(featmap)
+            if x_idx == 0:
+                tsne_input, labels = fm, mtype
+            else:
+                tsne_input = torch.concat((tsne_input, fm), dim=0)
+                labels = torch.concat((labels, mtype), dim=0)
+        print("tsne_input shape:", tsne_input.shape)
+        print("lables shape:", labels.shape)
+        from ackit.utils.plotter import plot_tSNE
+        plot_tSNE(embd=tsne_input.detach().cpu().numpy(), names=labels.detach().cpu().numpy(), save_path=self.run_save_dir + resume_path + f"/tsne_epoch_79.png")
+
+    def plot_heatmap(self, resume_path="202404181142_ptvae", load_epoch=119):
+        self.__setup_evaluate(resume_path=resume_path, load_epoch=load_epoch)
+        heatmap_input = None
+        labels = None
+        for x_idx, (x_mel, mtype, _) in enumerate(tqdm(self.trainloader, desc="Training")):
+            x_mel = x_mel.unsqueeze(1) / 255.
+            x_mel.to(self.device)
+            mtype = torch.tensor(mtype, device=self.device)
+            # print(x_mel.shape, mtype.shape)
+            with torch.no_grad():
+                featmap = self.pretrain_model(x_mel, featmap_only=True)
+
+            pred, _ = self.model(featmap)
+            if x_idx == 0:
+                heatmap_input, labels = pred, mtype
+            else:
+                heatmap_input = torch.concat((heatmap_input, pred), dim=0)
+                labels = torch.concat((labels, mtype), dim=0)
+        print("heatmap_input shape:", heatmap_input.shape)
+        print("lables shape:", labels.shape)
+        from ackit.utils.plotter import calc_accuracy, plot_heatmap
+        heatmap_input = heatmap_input.detach().cpu().numpy()
+        labels = labels.detach().cpu().numpy()
+        calc_accuracy(pred_matrix=heatmap_input, label_vec=labels, save_path=self.run_save_dir + resume_path + f"/accuracy_epoch_{load_epoch}.txt")
+        plot_heatmap(pred_matrix=heatmap_input, label_vec=labels, save_path=self.run_save_dir + resume_path + f"/heatmap_epoch_{load_epoch}.png")
 
 
 if __name__ == '__main__':
@@ -133,4 +179,5 @@ if __name__ == '__main__':
     # trainer.train_classifier()
 
     trainer = TrainerEncoder(istrain=False, isdemo=False)
-    trainer.train_classifier()
+    # trainer.plot_reduction(resume_path="202404181446_ptvae_lr-3", load_epoch=119)
+    trainer.plot_heatmap(resume_path="202404181446_ptvae_lr-3", load_epoch=119)

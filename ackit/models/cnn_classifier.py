@@ -24,16 +24,16 @@ class CNNCls(nn.Module):
         self.fc2 = nn.Linear(128, 64)
         self.fc3 = nn.Linear(64, class_num)
 
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+    def forward(self, featmap):
+        featmap = F.relu(self.conv1(featmap))
+        featmap = F.relu(self.conv2(featmap))
 
-        x = self.flatten(x)  # flatten all dimensions except batch
+        featmap = self.flatten(featmap)  # flatten all dimensions except batch
         # print(x.shape)
-        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc1(featmap))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
-        return x
+        return x, featmap
 
 
 if __name__ == '__main__':
