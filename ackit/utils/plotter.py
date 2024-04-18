@@ -65,16 +65,28 @@ def plot_tSNE(embd, names, save_path=""):
 
 
 ## Umap
+def plot_umap(embd, target, save_path=""):
+    import umap
+    reducer = umap.UMAP()
+    transformed = reducer.fit_transform(embd)
+    plt.figure()
+    plt.scatter(transformed[:, 0], transformed[:, 1], c=target, cmap='Spectral', s=5)
+    plt.colorbar()
+    plt.show()
+    plt.savefig(save_path, dpi=300, format="png")
+    plt.close()
 
 
 ## heatmap
-def plot_heatmap(pred_matrix, label_vec, save_path):
+def plot_heatmap(pred_matrix, label_vec, ticks, save_path):
     max_arg = list(pred_matrix.argmax(axis=1))
     conf_mat = metrics.confusion_matrix(max_arg, label_vec)
     df_cm = pd.DataFrame(conf_mat, index=range(conf_mat.shape[0]), columns=range(conf_mat.shape[0]))
     heatmap = sns.heatmap(df_cm, annot=True, fmt='d', cmap='YlGnBu')
     heatmap.yaxis.set_ticklabels(heatmap.yaxis.get_ticklabels(), rotation=0, ha='right')
     heatmap.xaxis.set_ticklabels(heatmap.xaxis.get_ticklabels(), rotation=45, ha='right')
+    plt.xticks(range(len(ticks)), ticks)
+    plt.yticks(range(len(ticks)), ticks)
     plt.xlabel("predict label")
     plt.ylabel("true label")
     plt.savefig(save_path, dpi=300, format="png")

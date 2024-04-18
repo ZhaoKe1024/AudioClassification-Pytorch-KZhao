@@ -171,7 +171,7 @@ class TrainerEncoder(object):
         heatmap_input = heatmap_input.detach().cpu().numpy()
         labels = labels.detach().cpu().numpy()
         calc_accuracy(pred_matrix=heatmap_input, label_vec=labels, save_path=self.run_save_dir + resume_path + f"/accuracy_epoch_{load_epoch}.txt")
-        plot_heatmap(pred_matrix=heatmap_input, label_vec=labels, save_path=self.run_save_dir + resume_path + f"/heatmap_epoch_{load_epoch}.png")
+        plot_heatmap(pred_matrix=heatmap_input, label_vec=labels, ticks=["fan", "pump", "slider", "ToyCar", "ToyConveyor", "valve"], save_path=self.run_save_dir + resume_path + f"/heatmap_epoch_{load_epoch}.png")
 
 
 if __name__ == '__main__':

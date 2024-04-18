@@ -17,7 +17,7 @@ This dataset contains 20000 audio pieces, each lasting 10 seconds, and a total o
 - pretrain_model: ./runs/VAE/model_epoch_12/model_epoch12.pth
 - config: ./configs/autoencoder.yaml
 - result: ./runs/vae_cnncls/202404181142_ptvae/
-- test and plot: ./ackit/utils/plotter.py plot_TSNE()
+- accuracy, precision, recall: ./ackit/utils/plotter.py calc_accuracy(pred_matrix, label_vec, save_path)
 
 ### run train
 ```text
