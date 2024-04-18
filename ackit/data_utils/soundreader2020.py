@@ -26,10 +26,10 @@ def get_former_loader(istrain=True, istest=False, configs=None, meta2label=None,
         file_paths = []
         mtid_list = []
         mtype_list = []
-        with open("./datasets/train_list.txt", 'r') as fin:
+        with open("../datasets/d2020_trainlist.txt", 'r') as fin:
             train_path_list = fin.readlines()
             if isdemo:
-                train_path_list = random.choices(train_path_list, k=2000)
+                train_path_list = random.choices(train_path_list, k=200)
             for item in train_path_list:
                 parts = item.strip().split('\t')
                 machine_type_id = int(parts[1])
@@ -91,20 +91,11 @@ class FormerReader(Dataset):
     def __getitem__(self, ind):
         if not self.istest:
             if self.istrain:
-                # print("***")
                 return self.mel_specs[ind], self.mtype_list[ind], self.mtids[ind]
             else:
-                # print("????")
                 return self.mel_specs[ind], self.mtype_list[ind], self.mtids[ind], self.y_true[ind], self.files[ind]
-            # if self.istrain:
-            #     return self.mel_specs[ind] / self.mel_specs[ind].abs().max(), self.mtype_list[ind], self.mtids[ind]
-            # else:
-            #     return self.mel_specs[ind] / self.mel_specs[ind].abs().max(), self.mtype_list[ind], self.mtids[ind], self.y_true[ind], self.files[ind]
         else:
-            # print("!!!")
-            # print(self.mel_specs[ind].shape, self.mtype_list[ind], self.mtids[ind], self.y_true[ind], self.files[ind])
             return self.mel_specs[ind], self.mtype_list[ind], self.mtids[ind], self.y_true[ind], self.files[ind]
-            # return self.mel_specs[ind] / self.mel_specs[ind].abs().max(), self.y_true[ind], self.files[ind]
 
     def __len__(self):
         return len(self.files)
@@ -115,3 +106,43 @@ class FormerReader(Dataset):
         y = wav_slice_padding(y, save_len=self.configs["feature"]["wav_length"])
         x_mel = self.w2m(torch.from_numpy(y.T))
         return torch.tensor(x_mel, device=self.device).transpose(0, 1).to(torch.float32)
+
+
+def num_bound():
+    import os
+
+    """
+    [(tensor(-66.9853), tensor(26.1165)), 
+    (tensor(-79.7177), tensor(26.1165)), 
+    (tensor(-79.7177), tensor(26.3636)), 
+    (tensor(-100.), tensor(27.5290)), 
+    (tensor(-100.), tensor(39.9690)), 
+    (tensor(-100.), tensor(39.9690))]
+    """
+    # name = "gearbox"
+    mode = "train"
+    mtypes = ["fan", "pump", "slider", "ToyCar", "ToyConveyor", "valve"]
+    # item_name = "section_00_source_train_normal_0008_noAttribute" + ".wav"
+    res = []
+    wav2mel = Wave2Mel(sr=16000)
+    val_min, val_max = 256., -256.
+    for mt in mtypes:
+        root_path = f"F:/DATAS/DCASE2020Task2ASD/dataset/dev_data_{mt}/{mt}/{mode}/"
+        for i, path_item in enumerate(os.listdir(root_path)):
+            x, _ = librosa.core.load(root_path + path_item, sr=16000, mono=True)
+            x_wav = torch.from_numpy(x)
+            x_mel = wav2mel(x_wav)
+            tmp_min, tmp_max = x_mel.min(), x_mel.max()
+            val_min = val_min if val_min < tmp_min else tmp_min
+            val_max = val_max if val_max > tmp_max else tmp_max
+            if i % 500 == 0:
+                print("min max:", val_min, val_max)
+        res.append((val_min, val_max))
+    print("min max:", val_min, val_max)
+    print(res)
+
+
+if __name__ == '__main__':
+    # import math
+    # print(math.floor(-58.0754), math.ceil(33.5727))
+    num_bound()

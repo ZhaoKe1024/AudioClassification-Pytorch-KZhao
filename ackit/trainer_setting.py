@@ -6,19 +6,27 @@
 # @Software: PyCharm
 import torch
 from torch.optim.lr_scheduler import CosineAnnealingLR
-
+from ackit.models.cnn_classifier import CNNCls
 from ackit.models.autoencoder import ConvEncoder
 from ackit.models.mobilefacenet import MobileFaceNet
 from ackit.models.mobilenetv2 import MobileNetV2
 from ackit.models.tdnn import TDNN
-from ackit.models.vae import ConvVAE
+from ackit.models.vae import ConvCVAE
 from ackit.modules.scheduler import WarmupCosineSchedulerLR
 from ackit.utils.utils import weight_init
 
 
 def get_model(use_model, configs, istrain=True):
     model = None
-    if use_model == "conv_encoder_decoder":
+    if use_model == "vae":
+        model = ConvCVAE(input_channel=1, input_length=configs["model"]["input_length"],
+                         input_dim=configs["feature"]["n_mels"])
+    elif use_model == "cvae":
+        model = ConvCVAE(input_channel=1, input_length=configs["model"]["input_length"],
+                         input_dim=configs["feature"]["n_mels"])
+    elif use_model == "cnn_classifier":
+        model = CNNCls(input_channel=8, input_shape=(8, 33, 13), conv_out_dim=32, class_num=7)
+    elif use_model == "conv_encoder_decoder":
         model = ConvEncoder(input_channel=1, input_length=configs["model"]["input_length"],
                             input_dim=configs["feature"]["n_mels"],
                             class_num=configs["model"]["mtid_class_num"],
@@ -30,9 +38,6 @@ def get_model(use_model, configs, istrain=True):
         model = MobileNetV2(dc=1, n_class=configs["class_num"])
     elif use_model == "mobilefacenet":
         model = MobileFaceNet(inp=1, num_class=configs["class_num"])
-    elif use_model == "vae":
-        model = ConvVAE(input_channel=1, input_length=configs["model"]["input_length"],
-                        input_dim=configs["feature"]["n_mels"])
     else:
         raise ValueError("this model is not found!!")
     if istrain:

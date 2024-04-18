@@ -18,7 +18,7 @@ from ackit.data_utils.reader import UrbansoundDataset, collate_fn_zero1_pad
 
 def collate_and_mask_test():
     root = "C:/Program Files (zk)/data/UrbanSound8K/UrbanSound8K"
-    train_list = "./data_entities/train_list.txt"
+    train_list = "./data_entities/d2020_train_list.txt"
     dataset = UrbansoundDataset(root=root, file_list=train_list, is_feat=False)
     dl = DataLoader(dataset, batch_size=16, shuffle=True, collate_fn=collate_fn_zero1_pad)
     af = AudioFeaturizer("MFCC")

@@ -8,7 +8,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from ackit.utils.pooling import AttentiveStatsPool, SelfAttentivePooling, TemporalAveragePooling, \
+from ackit.modules.pooling import AttentiveStatsPool, SelfAttentivePooling, TemporalAveragePooling, \
     TemporalStatisticsPooling
 
 

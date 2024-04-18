@@ -33,7 +33,7 @@ class TrainerTDNN():
                                     "run_save_dir"] + "tdnn/" + self.timestr + f'_tdnn/'
             if istrain:
                 os.makedirs(self.run_save_dir, exist_ok=True)
-        with open("./datasets/metadata2label.json", 'r', encoding='utf_8') as fp:
+        with open("./datasets/d2020_metadata2label.json", 'r', encoding='utf_8') as fp:
             self.meta2label = json.load(fp)
 
     def train(self):

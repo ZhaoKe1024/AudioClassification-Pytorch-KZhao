@@ -4,7 +4,7 @@ eval_directory : G:/DATAS-DCASE-ASD/DCASE2020Task2ASD/eval_dataset
 #eval_directory : G:/DATAS-mini/dcase2020-asd-task2/data/eval_dataset
 model_directory: ../models
 result_directory: ../results
-run_save_dir: "./runs/"
+run_save_dir: "./runs/vae_cnncls"
 result_file: result.csv
 use_model: "ClassConvReconAE"  # "v3tfs"
 #score: "MAHALA"
@@ -47,7 +47,7 @@ augment:
 
 fit:
   epochs : 80
-  batch_size : 256
+  batch_size : 128
   shuffle : True
   validation_split : 0.1
   verbose : 1
