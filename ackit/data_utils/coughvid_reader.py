@@ -3,13 +3,13 @@
 # @Time : 2024-01-24 18:17
 import os
 import numpy as np
-import matplotlib.pyplot as plt
+from tqdm import tqdm
 import pandas as pd
 import librosa
 import time
 import torch
 from torch.utils.data import Dataset, DataLoader
-from ackit.data_utils.audio import vad
+from ackit.data_utils.audio import AudioSegment, vad
 from ackit.data_utils.audio import wav_slice_padding
 from ackit.data_utils.featurizer import Wave2Mel
 
@@ -68,39 +68,59 @@ def read_labels_from_csv():
 
 
 class CoughVID_Dataset(Dataset):
-    def __init__(self, root_path="D:/DATAS/Medical/COUGHVID-public_dataset_v3/coughvid_20211012/", path_list=None, label_list=None, configs=None):
-        self.root_path = root_path
-        self.path_list = os.listdir(root_path)
+    def __init__(self, root_path="../../datasets/waveinfo_annotation.csv", configs=None):
+        # self.w2m = (AudioFeaturizer(feature_method="MelSpectrogram"))
         self.w2m = Wave2Mel(sr=16000)
+        # method_args={
+        # "sample_frequency": 16000,
+        #          "num_mel_bins": 80}
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.configs = configs
-        self.path_list = path_list
-        self.label_list = label_list
+        self.path_list = []
+        self.label_list = []
+        with open(root_path, 'r') as fin:
+            fin.readline()
+            line = fin.readline()
+            while line:
+                parts = line.split(',')
+                self.path_list.append(parts[1])
+                self.label_list.append(np.array(parts[2], dtype=np.int64))
+                line = fin.readline()
         self.wav_list = []
         self.spec_list = []
-        for item in path_list:
+        for item in tqdm(self.path_list, desc="Loading"):
             self.append_wav(item)
+            break
 
     def __getitem__(self, ind):
-        return self.wav_list[ind], self.spec_list[ind], self.label_list[ind]
+        return self.spec_list[ind], self.label_list[ind]
 
     def __len__(self):
         return len(self.path_list)
 
     def append_wav(self, file_path):
-        x_wav, sr = librosa.core.load(self.root_path+file_path)
-        x_wav = vad(x_wav)
-        self.wav_list.append(torch.tensor(x_wav, device=self.device).to(torch.float32))
-        y = wav_slice_padding(x_wav, save_len=self.configs["feature"]["wav_length"])
-        x_mel = self.w2m(torch.from_numpy(y.T))
-        self.spec_list.append(torch.tensor(x_mel, device=self.device).to(torch.float32))
-        # return torch.tensor(x_mel, device=self.device).transpose(0, 1).to(torch.float32)
+        audioseg = AudioSegment.from_file(file_path)
+        audioseg.vad()
+        audioseg.resample(target_sample_rate=16000)
+        audioseg.crop(duration=3.0, mode="train")
+        # self.wav_list.append(torch.tensor(audioseg.samples, device=self.device).to(torch.float32))
+        # y = wav_slice_padding(x_wav, save_len=self.configs["feature"]["wav_length"])
+        print(audioseg.samples.shape)
+
+        # expected scalar type Double but found Float
+        # 解决办法：.to(torch.float32)
+        x_mel = self.w2m(torch.from_numpy(audioseg.samples).to(torch.float32))
+        print(x_mel.shape)
+        self.spec_list.append(torch.tensor(x_mel, device=self.device))
+        return torch.tensor(x_mel, device=self.device).transpose(0, 1).to(torch.float32)
 
 
 if __name__ == '__main__':
-    # ext_list()
-    # stat_coughvid()
-    label_list = read_labels_from_csv()
-    print(label_list.shape)
-    # cough_dataset = CoughVID_Dataset(label_list=label_list)
-
+    # # ext_list()
+    # # stat_coughvid()
+    # label_list = read_labels_from_csv()
+    # print(label_list.shape)
+    cough_dataset = CoughVID_Dataset()
+    print(len(cough_dataset))
+    # print(cough_dataset.__getitem__(0))
+    # print(cough_dataset.__getitem__(15084))
