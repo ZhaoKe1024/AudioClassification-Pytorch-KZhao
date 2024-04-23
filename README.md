@@ -8,6 +8,13 @@ MFCC + TDNN (Mel Frequency Cepstral Coefficents, Time-Delay Neural Network)
 [DCASE2020](https://zenodo.org/record/3678171)
   : ./ackit/data_utils/soundreader2020.py
 
+[COUGHVID2021](https://doi.org/10.5281/zenodo.4048311)
+  : ./ackit/data_utils/soundexplore.ipynb
+  : ./coughvid_reader.py
+
+The procedure of preprocessing see in soundexplore.ipynb
+
+
 This dataset contains 20000 audio pieces, each lasting 10 seconds, and a total of 7 categories of machines, totaling 23 different machines.
 
 # Experiments Set

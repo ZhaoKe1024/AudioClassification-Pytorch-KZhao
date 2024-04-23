@@ -9,7 +9,7 @@ import librosa
 import time
 import torch
 from torch.utils.data import Dataset, DataLoader
-
+from ackit.data_utils.audio import vad
 from ackit.data_utils.audio import wav_slice_padding
 from ackit.data_utils.featurizer import Wave2Mel
 
@@ -88,7 +88,8 @@ class CoughVID_Dataset(Dataset):
         return len(self.path_list)
 
     def append_wav(self, file_path):
-        x_wav, _ = librosa.core.load(self.root_path+file_path)
+        x_wav, sr = librosa.core.load(self.root_path+file_path)
+        x_wav = vad(x_wav)
         self.wav_list.append(torch.tensor(x_wav, device=self.device).to(torch.float32))
         y = wav_slice_padding(x_wav, save_len=self.configs["feature"]["wav_length"])
         x_mel = self.w2m(torch.from_numpy(y.T))
