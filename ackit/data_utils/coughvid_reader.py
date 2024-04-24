@@ -81,7 +81,7 @@ def CoughVID_Lists(filename="../../datasets/waveinfo_annotation.csv", istrain=Tr
                 if ind > 1000:
                     return path_list, label_list
     N = len(path_list)
-    tr, va = N * 0.8, N * 0.9
+    tr, va = int(N * 0.8), int(N * 0.9)
     train_path, train_label = path_list[0:tr], label_list[0:tr]
     valid_path, valid_label = path_list[tr:va], label_list[tr:va]
     if istrain:
