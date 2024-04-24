@@ -7,10 +7,8 @@ from tqdm import tqdm
 import pandas as pd
 import librosa
 import time
-import torch
 from torch.utils.data import Dataset
 from ackit.data_utils.audio import AudioSegment
-from ackit.data_utils.featurizer import Wave2Mel
 
 
 def ext_list():

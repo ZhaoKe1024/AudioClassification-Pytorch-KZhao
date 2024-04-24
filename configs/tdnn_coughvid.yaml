@@ -10,3 +10,4 @@ model:
 fit:
   batch_size: 64
   epochs: 35
+  start_scheduler_epoch: 6

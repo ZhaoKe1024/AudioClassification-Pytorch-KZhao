@@ -74,7 +74,7 @@ class TrainerTDNN(object):
                     history1.append(pred_loss.item())
                 if x_idx % 60 == 0:
                     print(f"Epoch[{epoch_id}], mtid pred loss:{pred_loss.item():.4f}")
-            if epoch_id >= self.configs["model"]["start_scheduler_epoch"]:
+            if epoch_id >= self.configs["fit"]["start_scheduler_epoch"]:
                 self.scheduler.step()
 
             # ---------------------------
