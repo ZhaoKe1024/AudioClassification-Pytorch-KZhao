@@ -5,7 +5,7 @@
 # @File : train.py
 # @Software: PyCharm
 from ackit.trainer_ConvEncoder import TrainerEncoder
-from ackit.trainer_tdnn import TrainerTDNN
+from ackit.coughcls_tdnn import TrainerTDNN
 
 
 def run_encoder_classification():

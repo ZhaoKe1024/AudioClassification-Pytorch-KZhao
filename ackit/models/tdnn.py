@@ -74,7 +74,7 @@ class TDNN(nn.Module):
         out = self.bn5(self.pooling(x))
         out = self.bn6(self.linear(out))
         out = self.fc(out)
-        return out
+        return out, x
 
 
 class TDNN_Extractor(nn.Module):

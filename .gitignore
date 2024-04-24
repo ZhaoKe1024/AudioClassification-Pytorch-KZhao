@@ -4,5 +4,8 @@ __pycache__/
 /models/
 /run/
 /runs/
+/ackit/runs/
 /tools/
 /.ipynb_checkpoints/
+/ackit/.ipynb_checkpoints/
+/ackit/data_utils/.ipynb_checkpoints/

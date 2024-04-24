@@ -64,26 +64,38 @@ def read_labels_from_csv():
     # print("info group by status:\n", list(pd_status_stat))
 
 
-class CoughVID_Dataset(Dataset):
-    def __init__(self, root_path="../../datasets/waveinfo_annotation.csv", configs=None, isdemo=True):
-        self.configs = configs
-        self.path_list = []
-        self.label_list = []
-        with open(root_path, 'r') as fin:
-            fin.readline()
+def CoughVID_Lists(filename="../../datasets/waveinfo_annotation.csv", istrain=True, isdemo=False):
+    path_list = []
+    label_list = []
+    with open(filename, 'r') as fin:
+        fin.readline()
+        line = fin.readline()
+        ind = 0
+        while line:
+            parts = line.split(',')
+            path_list.append(parts[1])
+            label_list.append(np.array(parts[2], dtype=np.int64))
             line = fin.readline()
-            ind = 0
-            while line:
-                parts = line.split(',')
-                self.path_list.append(parts[1])
-                self.label_list.append(np.array(parts[2], dtype=np.int64))
-                line = fin.readline()
-                ind += 1
-                if isdemo:
-                    if ind > 1000:
-                        break
+            ind += 1
+            if isdemo:
+                if ind > 1000:
+                    return path_list, label_list
+    N = len(path_list)
+    tr, va = N * 0.8, N * 0.9
+    train_path, train_label = path_list[0:tr], label_list[0:tr]
+    valid_path, valid_label = path_list[tr:va], label_list[tr:va]
+    if istrain:
+        return train_path, train_label, valid_path, valid_label
+    else:
+        return path_list[va:], label_list[va:]
+
+
+class CoughVID_Dataset(Dataset):
+    def __init__(self, path_list, label_list):
+        self.path_list = path_list
+        self.label_list = label_list
         self.wav_list = []
-        for item in tqdm(self.path_list, desc="Loading"):
+        for item in tqdm(path_list, desc="Loading"):
             self.append_wav(item)
 
     def __getitem__(self, ind):

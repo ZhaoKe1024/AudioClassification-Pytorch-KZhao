@@ -90,7 +90,7 @@ def plot_heatmap(pred_matrix, label_vec, ticks, save_path):
     plt.xlabel("predict label")
     plt.ylabel("true label")
     plt.savefig(save_path, dpi=300, format="png")
-    plt.show()
+    # plt.show()
     plt.close()
 
 

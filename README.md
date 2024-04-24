@@ -20,6 +20,8 @@ This dataset contains 20000 audio pieces, each lasting 10 seconds, and a total o
 # Experiments Set
 
 ## TDNN - coughvid2021
+- trainer jupyter: ./ackit/coughcls_tdnn.ipynb
+- trainer py: ./ackit/trainer_tdnn.py
 - model: ./ackit/models/tdnn.py
 - dataset: ./ackit/data_utils/coughvid_reader.py
 - dataset: ./datasets/waveinfo_annotation.csv
