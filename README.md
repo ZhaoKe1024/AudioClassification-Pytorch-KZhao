@@ -19,7 +19,12 @@ This dataset contains 20000 audio pieces, each lasting 10 seconds, and a total o
 
 # Experiments Set
 
-## CNN
+## TDNN - coughvid2021
+- model: ./ackit/models/tdnn.py
+- dataset: ./ackit/data_utils/coughvid_reader.py
+- dataset: ./datasets/waveinfo_annotation.csv
+
+## CNN - dcase2020
 - models: ./ackit/models/cnn_classifier.py
 - pretrain_model: ./runs/VAE/model_epoch_12/model_epoch12.pth
 - config: ./configs/autoencoder.yaml

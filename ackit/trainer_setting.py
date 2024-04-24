@@ -32,7 +32,7 @@ def get_model(use_model, configs, istrain=True):
                             class_num=configs["model"]["mtid_class_num"],
                             class_num1=configs["model"]["type_class_num"])
     elif use_model == "tdnn":
-        model = TDNN(num_class=configs["class_num"], input_size=configs["model"]["input_length"],
+        model = TDNN(num_class=configs["model"]["num_class"], input_size=configs["model"]["n_mels"],
                      channels=configs["model"]["input_dim"])
     elif use_model == "mobilenetv2":
         model = MobileNetV2(dc=1, n_class=configs["class_num"])

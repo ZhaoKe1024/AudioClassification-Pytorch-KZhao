@@ -15,7 +15,7 @@ def run_encoder_classification():
 
 def run_tdnn_classification():
     # istrain设为False，则不创建输出的文件夹，并且只读取一点数据用来测试，测试是否有bug。
-    trainer = TrainerTDNN(configs="./configs/autoencoder.yaml", istrain=True)
+    trainer = TrainerTDNN(configs="./configs/tdnn_coughvid.yaml", istrain=True, isdemo=False)
     trainer.train()
 
 
@@ -27,5 +27,5 @@ def test():
 
 
 if __name__ == '__main__':
-    # run_tdnn_classification()
-    test()
+    run_tdnn_classification()
+    # test()

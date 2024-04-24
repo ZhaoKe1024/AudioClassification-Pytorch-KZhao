@@ -5,7 +5,6 @@
 # @File : sound_reader.py
 # @Software: PyCharm
 import random
-import numpy as np
 import librosa
 import torch
 from tqdm import tqdm

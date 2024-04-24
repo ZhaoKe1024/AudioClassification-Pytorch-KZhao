@@ -8,9 +8,8 @@ import pandas as pd
 import librosa
 import time
 import torch
-from torch.utils.data import Dataset, DataLoader
-from ackit.data_utils.audio import AudioSegment, vad
-from ackit.data_utils.audio import wav_slice_padding
+from torch.utils.data import Dataset
+from ackit.data_utils.audio import AudioSegment
 from ackit.data_utils.featurizer import Wave2Mel
 
 
@@ -68,32 +67,29 @@ def read_labels_from_csv():
 
 
 class CoughVID_Dataset(Dataset):
-    def __init__(self, root_path="../../datasets/waveinfo_annotation.csv", configs=None):
-        # self.w2m = (AudioFeaturizer(feature_method="MelSpectrogram"))
-        self.w2m = Wave2Mel(sr=16000)
-        # method_args={
-        # "sample_frequency": 16000,
-        #          "num_mel_bins": 80}
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    def __init__(self, root_path="../../datasets/waveinfo_annotation.csv", configs=None, isdemo=True):
         self.configs = configs
         self.path_list = []
         self.label_list = []
         with open(root_path, 'r') as fin:
             fin.readline()
             line = fin.readline()
+            ind = 0
             while line:
                 parts = line.split(',')
                 self.path_list.append(parts[1])
                 self.label_list.append(np.array(parts[2], dtype=np.int64))
                 line = fin.readline()
+                ind += 1
+                if isdemo:
+                    if ind > 1000:
+                        break
         self.wav_list = []
-        self.spec_list = []
         for item in tqdm(self.path_list, desc="Loading"):
             self.append_wav(item)
-            break
 
     def __getitem__(self, ind):
-        return self.spec_list[ind], self.label_list[ind]
+        return self.wav_list[ind], self.label_list[ind]
 
     def __len__(self):
         return len(self.path_list)
@@ -103,16 +99,7 @@ class CoughVID_Dataset(Dataset):
         audioseg.vad()
         audioseg.resample(target_sample_rate=16000)
         audioseg.crop(duration=3.0, mode="train")
-        # self.wav_list.append(torch.tensor(audioseg.samples, device=self.device).to(torch.float32))
-        # y = wav_slice_padding(x_wav, save_len=self.configs["feature"]["wav_length"])
-        print(audioseg.samples.shape)
-
-        # expected scalar type Double but found Float
-        # 解决办法：.to(torch.float32)
-        x_mel = self.w2m(torch.from_numpy(audioseg.samples).to(torch.float32))
-        print(x_mel.shape)
-        self.spec_list.append(torch.tensor(x_mel, device=self.device))
-        return torch.tensor(x_mel, device=self.device).transpose(0, 1).to(torch.float32)
+        self.wav_list.append(audioseg.samples)
 
 
 if __name__ == '__main__':
@@ -120,7 +107,19 @@ if __name__ == '__main__':
     # # stat_coughvid()
     # label_list = read_labels_from_csv()
     # print(label_list.shape)
+    from torch.utils.data import DataLoader
+    from ackit.data_utils.collate_fn import collate_fn
+    from ackit.data_utils.featurizer import Wave2Mel
+
     cough_dataset = CoughVID_Dataset()
-    print(len(cough_dataset))
-    # print(cough_dataset.__getitem__(0))
+    w2m = Wave2Mel(sr=16000, n_mels=80)
+    train_loader = DataLoader(cough_dataset, batch_size=32, shuffle=False,
+                              collate_fn=collate_fn)
+    for i, (x_wav, y_label, max_len_rate) in enumerate(train_loader):
+        print(x_wav.shape)
+        print(y_label)
+        print(max_len_rate)
+        x_mel = w2m(x_wav)
+        print(x_mel[0])
+        break
     # print(cough_dataset.__getitem__(15084))

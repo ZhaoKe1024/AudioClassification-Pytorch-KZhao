@@ -118,7 +118,8 @@ class TDNN_Extractor(nn.Module):
 
 
 if __name__ == '__main__':
-    input_wav = torch.rand(16, 1, 147000)
-    tdnn_model = TDNN_Extractor(mel_dim=128, hidden_size=512, channels=128)
+    # input_wav = torch.rand(16, 1, 48000)
+    input_wav = torch.rand(16, 80, 94)
+    tdnn_model = TDNN(num_class=3, input_size=128, )
     feat = tdnn_model(input_wav)
     print("feat shape:", feat.shape)

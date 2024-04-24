@@ -7,20 +7,22 @@
 import os
 import yaml
 import time
-import json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+from torch.utils.data import DataLoader
+from ackit.data_utils.collate_fn import collate_fn
 from ackit.trainer_setting import get_model
-from ackit.utils.utils import weight_init, load_ckpt
-from ackit.data_utils.sound_reader import get_former_loader
+from ackit.utils.utils import load_ckpt
+from ackit.data_utils.coughvid_reader import CoughVID_Dataset
+from ackit.data_utils.featurizer import Wave2Mel
+from ackit.utils.plotter import calc_accuracy, plot_heatmap
 
 
-class TrainerTDNN():
-    def __init__(self, configs="../configs/conformer.yaml", istrain=True):
+class TrainerTDNN(object):
+    def __init__(self, configs="../configs/tdnn.yaml", istrain=True, isdemo=True):
         self.configs = None
         with open(configs) as stream:
             self.configs = yaml.safe_load(stream)
@@ -28,54 +30,92 @@ class TrainerTDNN():
         self.num_epoch = self.configs["fit"]["epochs"]
         self.timestr = time.strftime("%Y%m%d%H%M", time.localtime())
         self.demo_test = not istrain
+        self.isdemo = isdemo
         if istrain:
             self.run_save_dir = self.configs[
-                                    "run_save_dir"] + "tdnn/" + self.timestr + f'_tdnn/'
-            if istrain:
+                                    "run_save_dir"] + self.timestr + f'_tdnn/'
+            if not isdemo:
                 os.makedirs(self.run_save_dir, exist_ok=True)
-        with open("./datasets/d2020_metadata2label.json", 'r', encoding='utf_8') as fp:
-            self.meta2label = json.load(fp)
+
+    def __setup_dataloader(self):
+        self.train_dataset = CoughVID_Dataset(root_path="./datasets/waveinfo_annotation.csv", configs=self.configs, isdemo=self.isdemo)
+        self.train_loader = DataLoader(self.train_dataset, batch_size=self.configs["fit"]["batch_size"], shuffle=True,
+                                       collate_fn=collate_fn)
+        self.w2m = Wave2Mel(sr=16000, n_mels=80)
+
+    def __setup_model(self):
+        self.model = get_model("tdnn", self.configs, istrain=True).to(self.device)
+        self.cls_loss = nn.CrossEntropyLoss().to(self.device)
+        print("All model and loss are on device:", self.device)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=5, eta_min=5e-5)
 
     def train(self):
-        model = get_model("tdnn", self.configs, istrain=True).to(self.device)
-        model.apply(weight_init)
-        class_loss = nn.CrossEntropyLoss().to(self.device)
-        print("All model and loss are on device:", self.device)
-        optimizer = optim.Adam(model.parameters(), lr=1e-4)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=5, eta_min=5e-5)
-
-        train_loader, _ = get_former_loader(istrain=True, istest=False, configs=self.configs,
-                                            meta2label=self.meta2label,
-                                            isdemo=self.demo_test)
+        self.__setup_dataloader()
+        self.__setup_model()
         history1 = []
-        for epoch in range(self.num_epoch):
-            model.train()
-            for x_idx, (x_mel, mtype, mtid) in enumerate(tqdm(train_loader, desc="Training")):
+        for epoch_id in range(self.num_epoch):
+            # ---------------------------
+            # -----------TRAIN-----------
+            # ---------------------------
+            self.model.train()
+            for x_idx, (x_wav, y_label, _) in enumerate(tqdm(self.train_loader, desc="Training")):
+                x_mel = self.w2m(x_wav).to(self.device)
+                y_label = torch.tensor(y_label, device=self.device)
                 # print("shape of x_mel:", x_mel.shape)
-                x_mel = x_mel / 255.
-                optimizer.zero_grad()
-                mtid = torch.tensor(mtid, device=self.device)
-                mtid_pred = model(x=x_mel)
+                self.optimizer.zero_grad()
+                y_pred = self.model(x=x_mel)
                 # recon_loss = self.recon_loss(recon_spec, x_mel)
-                mtid_pred_loss = class_loss(mtid_pred, mtid)
-                mtid_pred_loss.backward()
-                optimizer.step()
-                history1.append(mtid_pred_loss.item())
-                if x_idx % 60 == 0:
-                    print(f"Epoch[{epoch}], mtid pred loss:{mtid_pred_loss.item():.4f}")
-            if epoch % 1 == 0:
-                plt.figure(2)
-                plt.plot(range(len(history1)), history1, c="green", alpha=0.7)
-                plt.savefig(self.run_save_dir + f'mtid_loss_iter_{epoch}.png')
-            if epoch > 6 and epoch % 2 == 0:
-                os.makedirs(self.run_save_dir + f"model_epoch_{epoch}/", exist_ok=True)
-                tmp_model_path = "{model}model_{epoch}.pth".format(
-                    model=self.run_save_dir + f"model_epoch_{epoch}/",
-                    epoch=epoch)
-                torch.save(model.state_dict(), tmp_model_path)
+                pred_loss = self.cls_loss(y_pred, y_label)
+                pred_loss.backward()
+                self.optimizer.step()
 
-            if epoch >= self.configs["model"]["start_scheduler_epoch"]:
-                scheduler.step()
+                if x_idx > 2:
+                    history1.append(pred_loss.item())
+                if x_idx % 60 == 0:
+                    print(f"Epoch[{epoch_id}], mtid pred loss:{pred_loss.item():.4f}")
+            if epoch_id >= self.configs["model"]["start_scheduler_epoch"]:
+                self.scheduler.step()
+
+            # ---------------------------
+            # -----------SAVE------------
+            # ---------------------------
+            plt.figure(0)
+            plt.plot(range(len(history1)), history1, c="green", alpha=0.7)
+            plt.savefig(self.run_save_dir + f'cls_loss_iter_{epoch_id}.png')
+            # if epoch > 6 and epoch % 2 == 0:
+            os.makedirs(self.run_save_dir + f"model_epoch_{epoch_id}/", exist_ok=True)
+            tmp_model_path = "{model}model_{epoch}.pth".format(
+                model=self.run_save_dir + f"model_epoch_{epoch_id}/",
+                epoch=epoch_id)
+            torch.save(self.model.state_dict(), tmp_model_path)
+            # ---------------------------
+            # -----------TEST------------
+            # ---------------------------
+            self.model.eval()
+            heatmap_input = None
+            labels = None
+            for x_idx, (x_wav, y_label, _) in enumerate(tqdm(self.train_loader, desc="Test")):
+                x_mel = self.w2m(x_wav).to(self.device)
+                y_label = torch.tensor(y_label, device=self.device)
+                y_pred = self.model(x=x_mel)
+                if x_idx == 0:
+                    heatmap_input, labels = y_pred, y_label
+                else:
+                    heatmap_input = torch.concat((heatmap_input, y_pred), dim=0)
+                    labels = torch.concat((labels, y_label), dim=0)
+                if x_idx * self.configs["fit"]["batch_size"] > 800:
+                    break
+            print("heatmap_input shape:", heatmap_input.shape)
+            print("lables shape:", labels.shape)
+            # if epoch > 3:
+            #     self.plot_reduction(resume_path="", load_epoch=epoch, reducers=["heatmap"])
+            heatmap_input = heatmap_input.detach().cpu().numpy()
+            labels = labels.detach().cpu().numpy()
+            calc_accuracy(pred_matrix=heatmap_input, label_vec=labels, save_path=None)
+            plot_heatmap(pred_matrix=heatmap_input, label_vec=labels,
+                         ticks=["bearing", "fan", "gearbox", "slider", "ToyCar", "ToyTrain", "valve"],
+                         save_path=self.run_save_dir + f"/heatmap_epoch_{epoch_id}.png")
         print("============== END TRAINING ==============")
 
     def test_tsne(self, resume_model_path, load_epoch):
