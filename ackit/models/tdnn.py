@@ -50,6 +50,7 @@ class TDNN(nn.Module):
             raise Exception(f'没有{pooling_type}池化层！')
 
         self.fc = nn.Linear(embd_dim, num_class)
+        # self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         """
@@ -74,6 +75,7 @@ class TDNN(nn.Module):
         out = self.bn5(self.pooling(x))
         out = self.bn6(self.linear(out))
         out = self.fc(out)
+        # out = self.softmax(out)  # (batch_size, class_pred)
         return out, x
 
 
@@ -119,7 +121,14 @@ class TDNN_Extractor(nn.Module):
 
 if __name__ == '__main__':
     # input_wav = torch.rand(16, 1, 48000)
+    from ackit.modules.loss import FocalLoss
     input_wav = torch.rand(16, 80, 94)
-    tdnn_model = TDNN(num_class=3, input_size=128, )
-    feat = tdnn_model(input_wav)
+    tdnn_model = TDNN(num_class=3, input_size=80, )
+    pred, feat = tdnn_model(input_wav)
+    loss_fn = FocalLoss(class_num=3)
     print("feat shape:", feat.shape)
+    gt = torch.randint(0, 3, size=(16, ))
+    loss_val = loss_fn(inputs=pred, targets=gt)
+    print(loss_val)
+    loss_val.backward()
+
