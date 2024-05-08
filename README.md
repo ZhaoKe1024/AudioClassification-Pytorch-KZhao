@@ -19,6 +19,17 @@ This dataset contains 20000 audio pieces, each lasting 10 seconds, and a total o
 
 # Experiments Set
 
+## dsptcls
+### Dataset-Pretrain-Classifiers
+#### cnn: CNNCls
+set1
+- input: preprocessing from [mariostrbac](https://github.com/mariostrbac/environmental-sound-classification)
+- 2.95s
+
+set2
+- input: dcase2020
+- 2.95s
+
 ## TDNN - coughvid2021
 - trainer jupyter 1: ./ackit/coughcls_tdnn.ipynb
 - trainer jupyter 2: ./ackit/coughcls_tdnn_focalloss.ipynb
