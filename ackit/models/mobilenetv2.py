@@ -125,7 +125,7 @@ class MobileNetV2(nn.Module):
         """
         # print("shape of feature:", x.shape)
         pred = self.classifier(latent.mean(3).mean(2))
-        return pred, latent
+        return pred  # , latent
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -162,9 +162,9 @@ def mobilenet_v2(image_channel=3, pretrained=True):
 
 if __name__ == '__main__':
     import torch
-    net = MobileNetV2(dc=1, n_class=23)
-    x_spec = torch.rand(64, 1, 128, 288)
-    # x_label = torch.randint(0, 23, size=(64,))
+    net = MobileNetV2(dc=1, n_class=2, input_size=32)
+    x_spec = torch.rand(64, 1, 128, 2)
+    x_label = torch.randint(0, 2, size=(64,))
     pred, feat = net(x_spec)  # , x_label)
     print("shape of output:")
     print(pred.shape)

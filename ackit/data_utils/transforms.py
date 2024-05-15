@@ -117,13 +117,13 @@ def normalize_data(train_df, test_df):
     std = np.std(np.stack(train_df['melspectrogram']), axis=0)
 
     # normalize train set
-    train_spectrograms = (np.stack(train_df['melspectrogram']) - mean) / std
+    train_spectrograms = (np.stack(train_df['melspectrogram']) - mean) / (std+1e-6)
     train_labels = train_df['label'].to_numpy()
     train_folds = train_df['fold'].to_numpy()
     train_df = pd.DataFrame(zip(train_spectrograms, train_labels, train_folds), columns=['melspectrogram', 'label', 'fold'])
 
     # normalize test set
-    test_spectrograms = (np.stack(test_df['melspectrogram']) - mean) / std
+    test_spectrograms = (np.stack(test_df['melspectrogram']) - mean) / (std+1e-6)
     test_labels = test_df['label'].to_numpy()
     test_folds = test_df['fold'].to_numpy()
     test_df = pd.DataFrame(zip(test_spectrograms, test_labels, test_folds), columns=['melspectrogram', 'label', 'fold'])

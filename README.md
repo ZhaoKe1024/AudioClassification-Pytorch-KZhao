@@ -12,6 +12,9 @@ MFCC + TDNN (Mel Frequency Cepstral Coefficents, Time-Delay Neural Network)
   : ./ackit/data_utils/soundexplore.ipynb
   : ./coughvid_reader.py
 
+[covid19-cough](https://github.com/covid19-cough/dataset)
+  : ../SoundDL-CoughVID/covid19_explore
+
 The procedure of preprocessing see in soundexplore.ipynb
 
 
@@ -23,12 +26,33 @@ This dataset contains 20000 audio pieces, each lasting 10 seconds, and a total o
 ### Dataset-Pretrain-Classifiers
 #### cnn: CNNCls
 set1
-- input: preprocessing from [mariostrbac](https://github.com/mariostrbac/environmental-sound-classification)
+- input: ./datacreate.ipynb, preprocessing from [mariostrbac](https://github.com/mariostrbac/environmental-sound-classification)
 - 2.95s
+- run: ./ackit/dsptcls.py
 
 set2
-- input: dcase2020
+- input: ./datacreate.ipynb, dcase2020 [mariostrbac](https://github.com/mariostrbac/environmental-sound-classification)
 - 2.95s
+- run: ./ackit/dsptcls.py
+
+set3 Failed
+- input: ./datacreate.ipynb, reference: [COVID-19 Screening From Audio | Part 2](https://www.kaggle.com/code/nasrulhakim86/covid-19-screening-from-audio-part-2/notebook)
+- dataloader: reference: [mariostrbac](https://github.com/mariostrbac/environmental-sound-classification)
+
+set4
+- dataset: covid19 [covid19-cough](https://github.com/covid19-cough/dataset)
+- trained with fold10 cycle: not good
+- loss: CrossEntropy
+
+set5
+- dataset: covid19
+- trained with fold1 not cycle: well
+- loss: CrossEntropy
+
+set6
+- dataset: covid19
+- trained with fold1 not cycle: not good
+- loss: FocalLoss
 
 ## TDNN - coughvid2021
 - trainer jupyter 1: ./ackit/coughcls_tdnn.ipynb

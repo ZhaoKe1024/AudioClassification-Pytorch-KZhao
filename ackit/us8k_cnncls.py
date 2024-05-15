@@ -28,7 +28,7 @@ from ackit.data_utils.us8k import UrbanSound8kDataset
 
 
 class CNNNet(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device=torch.device("cuda:0")):
         super(CNNNet, self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=24, kernel_size=5, padding=0)
@@ -38,7 +38,6 @@ class CNNNet(nn.Module):
         self.fc1 = nn.Linear(in_features=48, out_features=60)
         self.fc2 = nn.Linear(in_features=60, out_features=10)
 
-        self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(self.parameters(), lr=0.001, eps=1e-07, weight_decay=1e-3)
 
         self.device = device
@@ -57,11 +56,11 @@ class CNNNet(nn.Module):
         # cnn layer-3
         x = self.conv3(x)
         x = F.relu(x)
+        # print(x.shape)
 
         # global average pooling 2D
         x = F.avg_pool2d(x, kernel_size=x.size()[2:])
         x = x.view(-1, 48)
-
         # dense layer-1
         x = self.fc1(x)
         x = F.relu(x)
@@ -247,3 +246,8 @@ class US8KCNNTrainer(object):
 if __name__ == '__main__':
     trainer = US8KCNNTrainer()
     trainer.train()
+
+    # deivce = torch.device("cuda:0")
+    # model = CNNNet(img_shape=(128, 64)).to(deivce)
+    # x = torch.randn(size=(16, 1, 128, 64)).to(deivce)
+    # print(model(x))
