@@ -10,7 +10,7 @@
 import os
 import sys
 from datetime import datetime
-
+import random
 from torch import optim
 from tqdm import tqdm
 import torch
@@ -38,8 +38,8 @@ class TrainerSet(object):
         self.batch_size, self.epoch_num = 64, 150
         self.train_loader, self.valid_loader = None, None
         self.model = None
-        self.save_dir = "covid19balancemnv2202405151055/"
-        os.makedirs("../runs/dsptcls/covid19balancemnv2202405151055/", exist_ok=True)
+        self.save_dir = "covid19randmnv2202405151239/"
+        os.makedirs("../runs/dsptcls/covid19randmnv2202405151239/", exist_ok=True)
         with open(f"../runs/dsptcls/" + self.save_dir + "info.txt", 'w') as fout:
             fout.write(f"Pretrained: {self.use_pt}; Model: {self.cls},Loss: {configs['LossFn']}\n")
             fout.write(
@@ -61,6 +61,7 @@ class TrainerSet(object):
             self.us8k_df = pd.read_pickle("F:/DATAS/COUGHVID-public_dataset_v3/coughvid_fine_df.pkl")
         elif self.use_data == "covid19":
             self.us8k_df = pd.read_pickle("F:/DATAS/covid-19-main/dataset-main/covid19_split_balancevalid_df.pkl")
+
             # self.us8k_df = pd.read_pickle("F:/DATAS/covid-19-main/dataset-main/covid19_split_df.pkl")
         else:
             raise Exception("no data pickle!")
@@ -88,8 +89,18 @@ class TrainerSet(object):
 
     def __get_fold(self, fold_k, batch_size=32):
         # split the data
-        train_df = self.us8k_df[self.us8k_df['fold'] != fold_k]
-        valid_df = self.us8k_df[self.us8k_df['fold'] == fold_k]
+        if self.use_data == "covid19":
+            neg_list = list(range(100)) + list(range(200, 1109))
+            pos_list = list(range(100, 200)) + list(range(1109, 2733))
+            random.shuffle(neg_list)
+            random.shuffle(pos_list)
+            valid_list = neg_list[:100] + pos_list[:100]
+            train_list = neg_list[100:] + pos_list[100:]
+            train_df = self.us8k_df.iloc[train_list, :]
+            valid_df = self.us8k_df.iloc[valid_list, :]
+        else:
+            train_df = self.us8k_df[self.us8k_df['fold'] != fold_k]
+            valid_df = self.us8k_df[self.us8k_df['fold'] == fold_k]
 
         # normalize the data
         train_df, valid_df = normalize_data(train_df, valid_df)
@@ -196,11 +207,11 @@ class TrainerSet(object):
         self.__setup_model()
         history = {'loss': [], 'accuracy': [], 'val_loss': [], 'val_accuracy': []}
 
-        self.__get_fold(fold_k=0)
+        # self.__get_fold(fold_k=0)
         # score = self.__evaluate(dataloader=self.valid_loader)
         start_time = datetime.now()
         for epoch_id in range(self.epoch_num):
-            # self.__get_fold(fold_k=epoch_id % 10 + 1)
+            self.__get_fold(fold_k=epoch_id % 10 + 1)  # covid19 random select
 
             # train the model
             # print("Pre-training accuracy: %.4f%%" % (100 * score[1]))
@@ -331,10 +342,10 @@ if __name__ == '__main__':
     trainer = TrainerSet(run_config)
     # trainer.test_run()
 
-    trainer.train()
+    # trainer.train()
 
-    # trainer.load_ckpt(resume_model_path="../runs/dsptcls/covid19_notcross/covid19_split_149.pt")
-    # trainer.test(resume_model_path="../runs/dsptcls/coughvid_nocycle/coughvid_split_149.pt")
+    # trainer.load_ckpt(resume_model_path="../runs/dsptcls/covid19randmnv2202405151239/ckpt_epoch149.pt")
+    trainer.test(resume_model_path="../runs/dsptcls/covid19randmnv2202405151239/ckpt_epoch149.pt")
 
     # trainer = TrainerSet(use_data="covid19", use_cls="cnn_avgpool")
     # trainer.train()
