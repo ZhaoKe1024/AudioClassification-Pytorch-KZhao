@@ -19,8 +19,11 @@ import matplotlib.pyplot as plt
 from sklearn import metrics
 from torch.utils.data import DataLoader
 from torchvision import transforms
+
 from ackit.us8k_cnncls import CNNNet
 from ackit.models.mobilenetv2 import MobileNetV2
+from ackit.modules.classifiers import LSTM_Classifier, LSTM_Attn_Classifier
+
 from ackit.modules.loss import FocalLoss
 from ackit.utils.utils import setup_seed
 from ackit.data_utils.transforms import *
@@ -35,12 +38,12 @@ class TrainerSet(object):
         self.use_cls = configs["Model"]
         self.cls = None
         self.configs = configs
-        self.batch_size, self.epoch_num = 64, 150
+        self.batch_size, self.epoch_num = configs["batch_size"], configs["epoch_num"]
         self.train_loader, self.valid_loader = None, None
         self.model = None
-        self.save_dir = "covid19randmnv2202405151239/"
-        os.makedirs("../runs/dsptcls/covid19randmnv2202405151239/", exist_ok=True)
-        with open(f"../runs/dsptcls/" + self.save_dir + "info.txt", 'w') as fout:
+        self.save_dir = configs["save_dir"]
+        os.makedirs(f"../runs/dsptcls/{self.save_dir}/", exist_ok=True)
+        with open(f"../runs/dsptcls/" + self.save_dir + "/info.txt", 'w') as fout:
             fout.write(f"Pretrained: {self.use_pt}; Model: {self.cls},Loss: {configs['LossFn']}\n")
             fout.write(
                 f"Network: MobileNetV2(dc=1, n_class=2, input_size=64), No softmax No sigmoid, but Linear. apply mean(3).mean(2) on feature map.")
@@ -127,12 +130,16 @@ class TrainerSet(object):
             # 自带 criterion和optim
         elif self.use_cls == "mnv2":
             self.model = MobileNetV2(dc=1, n_class=2, input_size=64).to(self.device)
-            self.optimizer = optim.Adam(self.model.parameters(), lr=self.configs["learning_rate"], eps=1e-07,
-                                        weight_decay=1e-3)
-            self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=11,
-                                                                        eta_min=5e-5)
+        elif self.use_cls == "lstm_vanilla":
+            self.model = LSTM_Classifier(inp_size=64, hidden_size=128, n_classes=2).to(self.device)
+        elif self.use_cls == "lstm_atten":
+            self.model = LSTM_Attn_Classifier(inp_size=64, hidden_size=128, n_classes=2).to(self.device)
         else:
             raise Exception("unknown model!")
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.configs["learning_rate"], eps=1e-07,
+                                    weight_decay=1e-3)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=11,
+                                                                    eta_min=5e-5)
         if self.configs["LossFn"] == "CrossEntropyLoss":
             self.criterion = nn.CrossEntropyLoss().to(self.device)
         elif self.configs["LossFn"] == "FocalLoss":
@@ -153,7 +160,8 @@ class TrainerSet(object):
             for step, batch in enumerate(self.train_loader):
                 X_batch = batch['spectrogram'].to(torch.float32).to(self.device)
                 y_batch = batch['label'].to(self.device)
-                # print(X_batch.shape)
+                print(X_batch.shape)
+                # return
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
 
@@ -229,12 +237,12 @@ class TrainerSet(object):
             history['accuracy'].append(train_acc)
             history['val_loss'].append(val_loss)
             history['val_accuracy'].append(val_acc)
-            if epoch_id % 10 == 0:
+            if epoch_id % 10 == 9:
                 self.show_results(history, epoch_id)
 
             if epoch_id > 100 and epoch_id % 10 == 9:
                 # os.makedirs("../runs/dsptcls/covid19fl/", exist_ok=True)
-                torch.save(self.model.state_dict(), f"../runs/dsptcls/{self.save_dir}ckpt_epoch{epoch_id}.pt")
+                torch.save(self.model.state_dict(), f"../runs/dsptcls/{self.save_dir}/ckpt_epoch{epoch_id}.pt")
             if epoch_id >= self.configs["start_scheduler_epoch"]:
                 self.scheduler.step()
         end_time = datetime.now() - start_time
@@ -266,7 +274,8 @@ class TrainerSet(object):
         plt.xlabel('Epoch')
         plt.legend(['train', 'validation'], loc='upper left')
         os.makedirs(f"../runs/dsptcls/{self.save_dir.split('/')[0]}/", exist_ok=True)
-        plt.savefig(f"../runs/dsptcls/{self.save_dir}validloss_{name}.png", format="png", dpi=300)
+        plt.savefig(f"../runs/dsptcls/{self.save_dir}/validloss_{name}.png", format="png", dpi=300)
+        plt.close()
         # plt.show()
 
         print('\tMax validation accuracy: %.4f %%' % (np.max(history['val_accuracy']) * 100))
@@ -327,25 +336,27 @@ if __name__ == '__main__':
     # train
     # Run paras
     loss_list = ["FocalLoss", "CrossEntropyLoss"]
+    model_list = ["cnn_avgpool", "mnv2", "lstm_vanilla", "lstm_atten"]
     run_config = {
         "use_data": "covid19",
         "input_shape": (128, 64),
         "pretrained": None,
-        "Model": "mnv2",
-        "LossFn": "CrossEntropyLoss",
+        "Model": model_list[2],
+        "LossFn": loss_list[1],
         "features": "Melspec",
-        "learning_rate": 1e-4,
+        "learning_rate": 2e-4,
         "lr_scheduler": "torch.optim.lr_scheduler.CosineAnnealingLR",
         "start_scheduler_epoch": 11,
-
+        "epoch_num": 220,
+        "batch_size": 128,
+        "save_dir": "covid19randlstm202405162049",
     }
     trainer = TrainerSet(run_config)
     # trainer.test_run()
-
-    # trainer.train()
+    trainer.train()
 
     # trainer.load_ckpt(resume_model_path="../runs/dsptcls/covid19randmnv2202405151239/ckpt_epoch149.pt")
-    trainer.test(resume_model_path="../runs/dsptcls/covid19randmnv2202405151239/ckpt_epoch149.pt")
+    # trainer.test(resume_model_path="../runs/dsptcls/covid19randmnv2202405151239/ckpt_epoch149.pt")
 
     # trainer = TrainerSet(use_data="covid19", use_cls="cnn_avgpool")
     # trainer.train()
