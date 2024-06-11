@@ -26,10 +26,16 @@ class LSTM_Classifier(nn.Module):
         super(LSTM_Classifier, self).__init__()
         self.lstm = nn.LSTM(inp_size, hidden_size, batch_first=True)
         self.classifier = nn.Linear(hidden_size, n_classes)
+        # self.h0 = torch.zeros(self.num_layers, 1, self.hidden_size)
+        # self.c0 = torch.zeros(self.num_layers, 1, self.hidden_size)
+
+    # def init_hidden(self):
+    #     (self.h0, self.c0) = (torch.zeros(self.num_layers, 1, self.hidden_size),
+    #                      torch.zeros(self.num_layers, 1, self.hidden_size))
 
     def forward(self, x):
         x = x.squeeze()
-        lstm_out, (hidden, _) = self.lstm(x.transpose(1, 2))
+        lstm_out, (hidden, _) = self.lstm(x.transpose(1, 2))  # , (self.h0, self.c0))
         lstm_out = lstm_out[:, -1, :]
         out = self.classifier(lstm_out)
         return out
@@ -71,7 +77,7 @@ def test_lstm():
     # input_size: 时间步
     # hidden_size:
     # num_layer: 层数
-    x = torch.randn(16, 64, 128)  # (bs, length, dim)
+    x = torch.randn(16, 1, 64, 128)  # (bs, length, dim)
     lstm1 = LSTM_Classifier(inp_size=64, hidden_size=128, n_classes=2)
     lstm2 = LSTM_Attn_Classifier(inp_size=64, hidden_size=128, n_classes=2,
                                  return_attn_weights=False, attn_type="soft")

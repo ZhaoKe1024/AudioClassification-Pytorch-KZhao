@@ -54,6 +54,14 @@ set6
 - trained with fold1 not cycle: not good
 - loss: FocalLoss
 
+set7 *The Most Perfect Set*
+
+```text
+Data: coughvid feature:Melspec
+Pretrained: None; Model: mnv2,Loss: FocalLoss
+LR: 0.0002, schedule: torch.optim.lr_scheduler.CosineAnnealingLRepoch_num: 220, batch_size: 128
+```
+
 ## TDNN - coughvid2021
 - trainer jupyter 1: ./ackit/coughcls_tdnn.ipynb
 - trainer jupyter 2: ./ackit/coughcls_tdnn_focalloss.ipynb

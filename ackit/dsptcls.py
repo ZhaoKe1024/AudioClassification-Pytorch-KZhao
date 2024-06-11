@@ -36,7 +36,6 @@ class TrainerSet(object):
         self.use_pt = configs["pretrained"]
         self.use_data = configs["use_data"]
         self.use_cls = configs["Model"]
-        self.cls = None
         self.configs = configs
         self.batch_size, self.epoch_num = configs["batch_size"], configs["epoch_num"]
         self.train_loader, self.valid_loader = None, None
@@ -44,13 +43,10 @@ class TrainerSet(object):
         self.save_dir = configs["save_dir"]
         os.makedirs(f"../runs/dsptcls/{self.save_dir}/", exist_ok=True)
         with open(f"../runs/dsptcls/" + self.save_dir + "/info.txt", 'w') as fout:
-            fout.write(f"Pretrained: {self.use_pt}; Model: {self.cls},Loss: {configs['LossFn']}\n")
-            fout.write(
-                f"Network: MobileNetV2(dc=1, n_class=2, input_size=64), No softmax No sigmoid, but Linear. apply mean(3).mean(2) on feature map.")
             fout.write(f"Data: {self.use_data} feature:{configs['features']}\n")
-            fout.write(
-                f"LR: {configs['learning_rate']}, schedule: {configs['lr_scheduler']}, epoch_num: {self.epoch_num}.")
-            fout.write(f"batch_size: {self.batch_size}")
+            fout.write(f"Pretrained: {self.use_pt}; Model: {self.use_cls},Loss: {configs['LossFn']}\n")
+            fout.write(f"LR: {configs['learning_rate']}, schedule: {configs['lr_scheduler']}\n")
+            fout.write(f"epoch_num: {self.epoch_num}, batch_size: {self.batch_size}")
 
     def __setup_dataset(self):
         if self.use_data == "us8k":
@@ -61,7 +57,8 @@ class TrainerSet(object):
             self.us8k_df = pd.read_pickle("F:/DATAS/DCASE2024Task2ASD/us8k_df.pkl")
         elif self.use_data == "coughvid":
             # self.us8k_df = pd.read_pickle("F:/DATAS/COUGHVID-public_dataset_v3/coughvid_df.pkl")
-            self.us8k_df = pd.read_pickle("F:/DATAS/COUGHVID-public_dataset_v3/coughvid_fine_df.pkl")
+            # self.us8k_df = pd.read_pickle("F:/DATAS/COUGHVID-public_dataset_v3/coughvid_fine_df.pkl")
+            self.us8k_df = pd.read_pickle("F:/DATAS/COUGHVID-public_dataset_v3/coughvid_split_specdf.pkl")
         elif self.use_data == "covid19":
             self.us8k_df = pd.read_pickle("F:/DATAS/covid-19-main/dataset-main/covid19_split_balancevalid_df.pkl")
 
@@ -70,7 +67,7 @@ class TrainerSet(object):
             raise Exception("no data pickle!")
         print(self.us8k_df.head())
 
-        if self.use_data == "covid19":
+        if self.use_data in ["coughvid", "covid19"]:
             self.train_transforms = transforms.Compose([MyRightShift(input_size=(128, 64),
                                                                      width_shift_range=7,
                                                                      shift_probability=0.9),
@@ -78,7 +75,7 @@ class TrainerSet(object):
                                                                         add_noise_probability=0.55),
                                                         MyReshape(output_size=(1, 128, 64))])
             self.test_transforms = transforms.Compose([MyReshape(output_size=(1, 128, 64))])
-        elif self.use_data in ["coughvid", "us8k", "dcase2024"]:
+        elif self.use_data in ["us8k", "dcase2024"]:
             # build transformation pipelines for data augmentation
             self.train_transforms = transforms.Compose([MyRightShift(input_size=128,
                                                                      width_shift_range=13,
@@ -95,6 +92,15 @@ class TrainerSet(object):
         if self.use_data == "covid19":
             neg_list = list(range(100)) + list(range(200, 1109))
             pos_list = list(range(100, 200)) + list(range(1109, 2733))
+            random.shuffle(neg_list)
+            random.shuffle(pos_list)
+            valid_list = neg_list[:100] + pos_list[:100]
+            train_list = neg_list[100:] + pos_list[100:]
+            train_df = self.us8k_df.iloc[train_list, :]
+            valid_df = self.us8k_df.iloc[valid_list, :]
+        elif self.use_data == "coughvid":
+            neg_list = list(range(2076))
+            pos_list = list(range(2076, 2850))
             random.shuffle(neg_list)
             random.shuffle(pos_list)
             valid_list = neg_list[:100] + pos_list[:100]
@@ -131,15 +137,15 @@ class TrainerSet(object):
         elif self.use_cls == "mnv2":
             self.model = MobileNetV2(dc=1, n_class=2, input_size=64).to(self.device)
         elif self.use_cls == "lstm_vanilla":
-            self.model = LSTM_Classifier(inp_size=64, hidden_size=128, n_classes=2).to(self.device)
+            self.model = LSTM_Classifier(inp_size=128, hidden_size=128, n_classes=2).to(self.device)
         elif self.use_cls == "lstm_atten":
-            self.model = LSTM_Attn_Classifier(inp_size=64, hidden_size=128, n_classes=2).to(self.device)
+            self.model = LSTM_Attn_Classifier(inp_size=128, hidden_size=128, n_classes=2).to(self.device)
         else:
             raise Exception("unknown model!")
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.configs["learning_rate"], eps=1e-07,
                                     weight_decay=1e-3)
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=11,
-                                                                    eta_min=5e-5)
+                                                                    eta_min=1e-4)
         if self.configs["LossFn"] == "CrossEntropyLoss":
             self.criterion = nn.CrossEntropyLoss().to(self.device)
         elif self.configs["LossFn"] == "FocalLoss":
@@ -160,7 +166,7 @@ class TrainerSet(object):
             for step, batch in enumerate(self.train_loader):
                 X_batch = batch['spectrogram'].to(torch.float32).to(self.device)
                 y_batch = batch['label'].to(self.device)
-                print(X_batch.shape)
+                # print(X_batch.shape, y_batch.shape)
                 # return
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
@@ -335,28 +341,29 @@ class TrainerSet(object):
 if __name__ == '__main__':
     # train
     # Run paras
+    data_list = ["us8k", "coughvid", "covid19"]
     loss_list = ["FocalLoss", "CrossEntropyLoss"]
     model_list = ["cnn_avgpool", "mnv2", "lstm_vanilla", "lstm_atten"]
     run_config = {
-        "use_data": "covid19",
+        "use_data": data_list[1],
         "input_shape": (128, 64),
         "pretrained": None,
-        "Model": model_list[2],
-        "LossFn": loss_list[1],
+        "Model": model_list[1],
+        "LossFn": loss_list[0],
         "features": "Melspec",
         "learning_rate": 2e-4,
         "lr_scheduler": "torch.optim.lr_scheduler.CosineAnnealingLR",
         "start_scheduler_epoch": 11,
         "epoch_num": 220,
         "batch_size": 128,
-        "save_dir": "covid19randlstm202405162049",
+        "save_dir": "coughvid202406111730lstm",
     }
     trainer = TrainerSet(run_config)
-    # trainer.test_run()
     trainer.train()
+    # # trainer.test_run()
 
-    # trainer.load_ckpt(resume_model_path="../runs/dsptcls/covid19randmnv2202405151239/ckpt_epoch149.pt")
-    # trainer.test(resume_model_path="../runs/dsptcls/covid19randmnv2202405151239/ckpt_epoch149.pt")
+    # trainer.load_ckpt(resume_model_path="../runs/dsptcls/coughvid202405181711mnv2_finecycle/ckpt_epoch219.pt")
+    # trainer.test(resume_model_path="../runs/dsptcls/coughvid202405181711mnv2_finecycle/ckpt_epoch219.pt")
 
     # trainer = TrainerSet(use_data="covid19", use_cls="cnn_avgpool")
     # trainer.train()
