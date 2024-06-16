@@ -14,7 +14,8 @@ from ackit.data_utils.audio import wav_slice_padding
 from ackit.data_utils.featurizer import Wave2Mel
 
 
-def get_former_loader(istrain=True, istest=False, configs=None, meta2label=None, isdemo=False, exclude=None):
+def get_former_loader(istrain=True, istest=False, configs=None, meta2label=None, isdemo=False, exclude=None,
+                      iswave=False):
     # generate dataset
     # generate dataset
     print("============== DATASET_GENERATOR ==============")
@@ -40,9 +41,16 @@ def get_former_loader(istrain=True, istest=False, configs=None, meta2label=None,
                 machine_id_id = parts[2]
                 meta = ma_id_map[machine_type_id] + '-id_' + machine_id_id
                 mtid_list.append(meta2label[meta])
-        train_dataset = FormerReader(file_paths=file_paths, mtype_list=mtype_list, mtid_list=mtid_list, y_true_list=None,
-                                     configs=configs,
-                                     istrain=True)
+        if iswave:
+            train_dataset = WaveReader(file_paths=file_paths, mtype_list=mtype_list, mtid_list=mtid_list,
+                                       y_true_list=None,
+                                       configs=configs,
+                                       istrain=True, istest=istest)
+        else:
+            train_dataset = FormerReader(file_paths=file_paths, mtype_list=mtype_list, mtid_list=mtid_list,
+                                         y_true_list=None,
+                                         configs=configs,
+                                         istrain=True)
         train_loader = DataLoader(train_dataset, batch_size=configs["fit"]["batch_size"], shuffle=True)
     if istest:
         print("---------------test dataset-------------")
@@ -66,10 +74,50 @@ def get_former_loader(istrain=True, istest=False, configs=None, meta2label=None,
                 y_true_list.append(int(parts[3]))
                 meta = ma_id_map[machine_type_id] + '-id_' + machine_id_id
                 mtid_list.append(meta2label[meta])
-        test_dataset = FormerReader(file_paths=file_paths, mtype_list=mtype_list, mtid_list=mtid_list, y_true_list=y_true_list,
-                                    configs=configs, istrain=False, istest=istest)
+        if iswave:
+            test_dataset = WaveReader(file_paths=file_paths, mtype_list=mtype_list, mtid_list=mtid_list,
+                                      y_true_list=y_true_list,
+                                      configs=configs, istrain=False, istest=istest)
+
+        else:
+            test_dataset = FormerReader(file_paths=file_paths, mtype_list=mtype_list, mtid_list=mtid_list,
+                                        y_true_list=None,
+                                        configs=configs,
+                                        istrain=True)
         test_loader = DataLoader(test_dataset, batch_size=configs["fit"]["batch_size"], shuffle=True)
     return train_loader, test_loader
+
+
+class WaveReader(Dataset):
+    def __init__(self, file_paths, mtype_list, mtid_list, y_true_list, configs, istrain=True, istest=False):
+        self.files = file_paths
+        self.mtids = mtid_list
+        self.mtype_list = mtype_list
+        self.y_true = y_true_list
+        self.configs = configs
+        self.wav_list = []
+        for fi in tqdm(file_paths, desc=f"build Set..."):
+            self.wav_list.append(self.load_wav_2mel(fi))
+        self.istrain = istrain
+        self.istest = istest
+
+    def __getitem__(self, ind):
+        if not self.istest:
+            if self.istrain:
+                return self.wav_list[ind], self.mtype_list[ind], self.mtids[ind]
+            else:
+                return self.wav_list[ind], self.mtype_list[ind], self.mtids[ind], self.y_true[ind], self.files[ind]
+        else:
+            return self.wav_list[ind], self.mtype_list[ind], self.mtids[ind], self.y_true[ind], self.files[ind]
+
+    def __len__(self):
+        return len(self.files)
+
+    def load_wav_2mel(self, wav_path):
+        # print(wav_path)
+        y, sr = librosa.core.load(wav_path, sr=16000)
+        y = wav_slice_padding(y, save_len=self.configs["feature"]["wav_length"])
+        return y
 
 
 class FormerReader(Dataset):
@@ -85,7 +133,7 @@ class FormerReader(Dataset):
         for fi in tqdm(file_paths, desc=f"build Set..."):
             self.mel_specs.append(self.load_wav_2mel(fi))
         self.istrain = istrain
-        self.istest=istest
+        self.istest = istest
 
     def __getitem__(self, ind):
         if not self.istest:
