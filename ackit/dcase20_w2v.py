@@ -19,21 +19,21 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+from ackit.data_utils.featurizer import wav_slice_padding, Wave2Mel
 from ackit.pretrained.wav2vec import Wav2Vec
 from ackit.models.mobilenetv2 import MobileNetV2
 # from ackit.modules.classifiers import LSTM_Classifier, LSTM_Attn_Classifier
-from readers.featurizer import wav_slice_padding
 
 
 class WaveReader(Dataset):
-    def __init__(self, file_paths, mtype_list, mtid_list):
+    def __init__(self, file_paths, mtype_list, mtid_list, wavlen):
         self.files = file_paths
         self.mtype_list = mtype_list
         self.mtids = mtid_list
         self.wav_list = []
         for fi in tqdm(file_paths, desc=f"build Set..."):
             y, sr = librosa.core.load(fi, sr=16000)
-            y = wav_slice_padding(y, save_len=16000)
+            y = wav_slice_padding(y, save_len=wavlen)
             self.wav_list.append(y)
 
     def __getitem__(self, ind):
@@ -48,8 +48,14 @@ def get_type_loader(configs=None, m2l=None):
     # generate dataset
     print("============== DATASET_GENERATOR ==============")
     ma_id_map = {5: "valve", 4: "slider", 3: "pump", 2: "fan", 1: "ToyConveyor", 0: "ToyCar"}
-    every_num, every_valid_num = 1200, 200
-    cnts_train, cnts_valid = [0] * 6, [0] * 6
+    # cnttp_train, cnttp_valid = [0] * 6, [0] * 6
+    cntid_train, cntid_valid = [0] * 23, [0] * 23
+    # tartp_train = [2600, 2601, 2600, 2600, 2600, 2600]
+    # tartp_valid = [200, 200, 200, 200, 200, 200, 200]
+    tarid_train = [384] * 23
+    tarid_valid = [50] * 23
+    # tarid_train = [650, 650, 650, 650, 867, 867, 867, 650, 650, 650, 650, 650, 650, 650, 650, 650, 650, 650, 650, 650, 650, 650, 650]
+    # tarid_valid = [50, 50, 50, 50, 67, 67, 67, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]
     print("---------------train dataset-------------")
     file_train, file_valid = [], []
     mtype_train, mtype_valid = [], []
@@ -59,23 +65,28 @@ def get_type_loader(configs=None, m2l=None):
         for item in train_path_list:
             parts = item.strip().split('\t')
             machine_type_id = int(parts[1])
+            # if machine_type_id < 2:
+            #     continue
             machine_id_id = parts[2]
             meta = ma_id_map[machine_type_id] + '-id_' + machine_id_id
-            if cnts_train[machine_type_id] < every_num:
+            mid = m2l[meta]
+            if cntid_train[mid] < tarid_train[mid]:
                 file_train.append(parts[0])
                 mtype_train.append(machine_type_id)
-                mtid_train.append(m2l[meta])
-                cnts_train[machine_type_id] += 1
-            elif cnts_valid[machine_type_id] < every_valid_num:
+                mtid_train.append(mid)
+                cntid_train[mid] += 1
+            elif cntid_valid[mid] < tarid_valid[mid]:
                 file_valid.append(parts[0])
                 mtype_valid.append(machine_type_id)
                 mtid_valid.append(m2l[meta])
-                cnts_valid[machine_type_id] += 1
+                cntid_valid[mid] += 1
             else:
                 continue
-    train_dataset = WaveReader(file_paths=file_train, mtype_list=mtype_train, mtid_list=mtid_train)
+    print(cntid_train)
+    print(cntid_valid)
+    train_dataset = WaveReader(file_paths=file_train, mtype_list=mtype_train, mtid_list=mtid_train, wavlen=configs["feature"]["wavlen_mel"])
     train_loader = DataLoader(train_dataset, batch_size=configs["fit"]["batch_size"], shuffle=True)
-    test_dataset = WaveReader(file_paths=file_valid, mtype_list=mtype_valid, mtid_list=mtid_valid)
+    test_dataset = WaveReader(file_paths=file_valid, mtype_list=mtype_valid, mtid_list=mtid_valid, wavlen=configs["feature"]["wavlen_mel"])
     test_loader = DataLoader(test_dataset, batch_size=configs["fit"]["batch_size"], shuffle=False)
     return train_loader, test_loader
 
@@ -83,28 +94,34 @@ def get_type_loader(configs=None, m2l=None):
 def train():
     timestr = time.strftime("%Y%m%d%H%M", time.localtime())
     run_save_dir = "../runs/dcase20cls" + '/' + timestr + f'w2n7c/'
+    # Wav2Vec: save_len = 20865
+    # Wav2Mel: save_len = 147000
     configs = {
         "fit": {
             "batch_size": 32,
         },
         "feature": {
-            "wav_length": 20865
+            "wavlen_mel": 65300,
+            "wavlen_vec": 20865
         }
     }
-    setting_content = "Wave2Vector, wav_length: 16000, batch_size: 32, num_type: 6; \n"
+    # setting_content = "Wave2Vector, wav_length: 16000, batch_size: 32, num_type: 6; \n"
+    setting_content = f"Wave2Mel, wav_length: {configs['feature']['wavlen_mel']}, batch_size: 32, num_type: 6; \n"
     setting_content += "iter_max = 50; warm_up_iter, T_max, lr_max, lr_min = 10, iter_max // 1.5, 5e-3, 5e-4;"
-    setting_content += "LSTM_Attn_Classifier(inp_size=512, hidden_size=64, n_classes=6, return_attn_weights=False, attn_type='dot');"
+    setting_content += "MobileNetV2(dc=1, n_class=6, input_size=32);"
     setting_content += "optimizer = optim.Adam(cl_model.parameters(), lr=5e-4);"
     device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
     with open("../datasets/d2020_metadata2label.json", 'r', encoding='utf_8') as fp:
         meta2label = json.load(fp)
     train_loader, test_loader = get_type_loader(configs=configs, m2l=meta2label)
-    w2v = Wav2Vec(pretrained=True, pretrained_path="../ackit/pretrained/wav2vec_large.pt")
+    # w2v = Wav2Vec(pretrained=True, pretrained_path="../ackit/pretrained/wav2vec_large.pt")
+    # w2v = w2v.to(device=device)
+    w2m = Wave2Mel(sr=16000)
     cl_model = MobileNetV2(dc=1, n_class=6, input_size=32)
     # cl_model = LSTM_Attn_Classifier(inp_size=512, hidden_size=64, n_classes=6, return_attn_weights=False, attn_type='dot')
     criterion = nn.CrossEntropyLoss()
 
-    iter_max = 50
+    iter_max = 80
     warm_up_iter, T_max, lr_max, lr_min = 10, iter_max // 1, 5e-3, 5e-4
     # reference: https://blog.csdn.net/qq_36560894/article/details/114004799
     # 为param_groups[0] (即model.layer2) 设置学习率调整规则 - Warm up + Cosine Anneal
@@ -115,7 +132,7 @@ def train():
     # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10, eta_min=5e-4)
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda0)
 
-    w2v, cl_model, criterion = w2v.to(device=device), cl_model.to(device=device), criterion.to(device)
+    cl_model, criterion = cl_model.to(device=device), criterion.to(device)
 
     old = 0
     STD_acc = []
@@ -129,14 +146,15 @@ def train():
         loss_list = []
         lr_list.append(optimizer.param_groups[0]['lr'])
         for idx, (wav, mtp, _) in enumerate(tqdm(train_loader, desc="Train")):
-            wav = wav.to(device)
+            mel = w2m(wav).to(device)
+            # wav = wav.to(device)
             mtp = mtp.to(device)
-            mel = w2v(wav)
+            # torch.Size([32, 16000]) torch.Size([32, 512, 98]) torch.Size([32, 6]) torch.Size([])
+            # print("shape wav, mel:", wav.shape, mel.shape)
+            # return
             optimizer.zero_grad()
             pred = cl_model(x=mel.unsqueeze(1))
             loss_v = criterion(pred, mtp)
-            # torch.Size([32, 16000]) torch.Size([32, 512, 98]) torch.Size([32, 6]) torch.Size([])
-            # print("shape wav, mel, pred:", wav.shape, mel.shape, pred.shape, loss.shape)
             loss_list.append(loss_v.item())
             loss_v.backward()
 
@@ -149,9 +167,9 @@ def train():
             acc_list = []
             loss_list = []
             for idx, (wav, mtp, _) in enumerate(tqdm(test_loader, desc="Test")):
-                wav = wav.to(device)
+                mel = w2m(wav).to(device)
+                # wav = wav.to(device)
                 mtp = mtp.to(device)
-                mel = w2v(wav)
                 pred = cl_model(x=mel.unsqueeze(1))
                 loss_eval = criterion(pred, mtp)
                 acc_batch = metrics.accuracy_score(mtp.data.cpu().numpy(),
@@ -262,9 +280,10 @@ if __name__ == '__main__':
     train()
 
     # w2v = Wav2Vec(pretrained=True, pretrained_path="../ackit/pretrained/wav2vec_large.pt")
+    # w2m = Wave2Mel(sr=16000)
     # # [20785, 20940]  都是128
-    # for i in range(20780, 20960, 5):
-    #     print(i, w2v(torch.rand(size=(1, i))).shape)  # 128
+    # for i in range(64000, 92000, 100):
+    #     print(i, w2m(torch.rand(size=(1, i))).shape)  # 128
 
     # print(w2v(torch.rand(size=(1, 16000))).shape)
 
